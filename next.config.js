@@ -7,6 +7,9 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: { unoptimized: true },
+  experimental: {
+    esmExternals: false,
+  },
   webpack: (config, { isServer }) => {
     // Ignore optional WebSocket dependencies for client-side builds
     if (!isServer) {
@@ -16,21 +19,10 @@ const nextConfig = {
       });
     }
     
-    // Add optimization for problematic packages
-    config.optimization = {
-      ...config.optimization,
-      splitChunks: {
-        ...config.optimization.splitChunks,
-        cacheGroups: {
-          ...config.optimization.splitChunks?.cacheGroups,
-          vendor: {
-            test: /[\\/]node_modules[\\/]/,
-            name: 'vendors',
-            chunks: 'all',
-          },
-        },
-      },
-    };
+    // Disable minification temporarily to avoid chunk corruption
+    if (!isServer) {
+      config.optimization.minimize = false;
+    }
     
     return config;
   },
