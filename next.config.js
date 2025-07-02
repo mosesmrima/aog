@@ -15,6 +15,23 @@ const nextConfig = {
         'utf-8-validate': 'utf-8-validate',
       });
     }
+    
+    // Add optimization for problematic packages
+    config.optimization = {
+      ...config.optimization,
+      splitChunks: {
+        ...config.optimization.splitChunks,
+        cacheGroups: {
+          ...config.optimization.splitChunks?.cacheGroups,
+          vendor: {
+            test: /[\\/]node_modules[\\/]/,
+            name: 'vendors',
+            chunks: 'all',
+          },
+        },
+      },
+    };
+    
     return config;
   },
 };
