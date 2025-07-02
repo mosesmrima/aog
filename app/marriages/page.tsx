@@ -76,13 +76,18 @@ export default function MarriagesPage() {
       setImportResult(null);
 
       // Read file content
+      console.log('Reading file content...');
       const fileContent = await file.text();
+      console.log('File content length:', fileContent.length);
       
       // Initialize importer
+      console.log('Initializing importer with user ID:', user.id);
       const importer = new MarriageBulkImporter(user.id);
       
       // Parse CSV data
+      console.log('Parsing CSV data...');
       const records = importer.parseCSVData(fileContent);
+      console.log('Parsed records count:', records.length);
       
       if (records.length === 0) {
         toast({
@@ -139,9 +144,12 @@ export default function MarriagesPage() {
 
     } catch (error: any) {
       console.error('Import error:', error);
+      console.error('Error stack:', error?.stack);
+      console.error('Error details:', JSON.stringify(error, null, 2));
+      
       toast({
         title: 'Import failed',
-        description: error.message || 'An unexpected error occurred during import.',
+        description: error?.message || 'An unexpected error occurred during import.',
         variant: 'destructive',
       });
     } finally {

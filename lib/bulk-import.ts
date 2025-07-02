@@ -34,15 +34,18 @@ export class MarriageBulkImporter {
    * Parse CSV data and convert to import format
    */
   parseCSVData(csvContent: string): MarriageImportRecord[] {
-    const lines = csvContent.split('\n');
-    const records: MarriageImportRecord[] = [];
-    
-    // Skip header row
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
+    try {
+      console.log('Starting CSV parsing...');
+      const lines = csvContent.split('\n');
+      console.log('Total lines in CSV:', lines.length);
+      const records: MarriageImportRecord[] = [];
       
-      try {
+      // Skip header row
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        
+        try {
         const columns = this.parseCSVLine(line);
         
         // Skip if not enough columns or row number is empty
@@ -55,9 +58,14 @@ export class MarriageBulkImporter {
       } catch (error) {
         console.error(`Error parsing line ${i + 1}:`, error);
       }
+      }
+      
+      console.log('CSV parsing completed. Records found:', records.length);
+      return records;
+    } catch (error) {
+      console.error('CSV parsing failed:', error);
+      throw new Error(`Failed to parse CSV: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-    
-    return records;
   }
 
   /**
