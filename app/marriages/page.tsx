@@ -76,7 +76,7 @@ export default function MarriagesPage() {
       setImportResult(null);
 
       // Read file content
-      console.log('Reading file content...');
+      console.log('🔥 NEW VERSION - Reading file content...');
       const fileContent = await file.text();
       console.log('File content length:', fileContent.length);
       
