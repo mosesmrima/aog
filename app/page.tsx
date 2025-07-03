@@ -92,13 +92,6 @@ export default function Home() {
                   Access System
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="border-gray-300 text-gray-700 hover:bg-gray-50 px-8 py-4 rounded-xl text-lg"
-                >
-                  Learn More
-                </Button>
               </div>
             </motion.div>
 
