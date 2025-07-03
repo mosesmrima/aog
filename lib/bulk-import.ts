@@ -328,7 +328,7 @@ export class MarriageBulkImporter {
             groom_name: record.groom_name,
             bride_name: record.bride_name,
             place_of_marriage: record.place_of_marriage,
-            certificate_number: record.certificate_number || `AUTO_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            certificate_number: record.certificate_number || null,
             license_type: record.license_type,
             files: record.files ? JSON.stringify([{ url: record.files, name: 'Import File' }]) : JSON.stringify([]),
             created_by: this.userId,
@@ -345,11 +345,51 @@ export class MarriageBulkImporter {
         return result;
       }
 
-      // Simple batch insert without upsert (let database handle duplicates)
-      const { data, error } = await supabase
-        .from('marriages')
-        .insert(recordsToInsert)
-        .select('id');
+      // Separate records with and without certificate numbers
+      const recordsWithCerts = recordsToInsert.filter(r => r.certificate_number);
+      const recordsWithoutCerts = recordsToInsert.filter(r => !r.certificate_number);
+      
+      let insertedCount = 0;
+      let errorOccurred = false;
+      let mainError = null;
+      
+      // Insert records without certificate numbers (these can't conflict)
+      if (recordsWithoutCerts.length > 0) {
+        const { data: insertData, error: insertError } = await supabase
+          .from('marriages')
+          .insert(recordsWithoutCerts)
+          .select('id');
+          
+        if (insertError) {
+          console.warn('Error inserting records without certificates:', insertError.message);
+          errorOccurred = true;
+          mainError = insertError;
+        } else {
+          insertedCount += insertData?.length || recordsWithoutCerts.length;
+        }
+      }
+      
+      // Upsert records with certificate numbers (can conflict)
+      if (recordsWithCerts.length > 0) {
+        const { data: upsertData, error: upsertError } = await supabase
+          .from('marriages')
+          .upsert(recordsWithCerts, { 
+            onConflict: 'certificate_number',
+            ignoreDuplicates: false 
+          })
+          .select('id');
+          
+        if (upsertError) {
+          console.warn('Error upserting records with certificates:', upsertError.message);
+          errorOccurred = true;
+          mainError = upsertError;
+        } else {
+          insertedCount += upsertData?.length || recordsWithCerts.length;
+        }
+      }
+      
+      const data = insertedCount > 0 ? Array(insertedCount).fill({}) : null;
+      const error = errorOccurred ? mainError : null;
 
       if (error) {
         console.warn(`Batch insert failed for batch starting at ${batchOffset}: ${error.message}`);
@@ -373,7 +413,10 @@ export class MarriageBulkImporter {
           try {
             const { data: chunkData, error: chunkError } = await supabase
               .from('marriages')
-              .insert(chunk)
+              .upsert(chunk, { 
+                onConflict: 'certificate_number',
+                ignoreDuplicates: false 
+              })
               .select('id');
               
             if (chunkError) {
@@ -382,7 +425,10 @@ export class MarriageBulkImporter {
                 try {
                   const { error: individualError } = await supabase
                     .from('marriages')
-                    .insert([chunk[j]]);
+                    .upsert([chunk[j]], { 
+                      onConflict: 'certificate_number',
+                      ignoreDuplicates: false 
+                    });
                     
                   if (individualError) {
                     result.errors.push({
@@ -416,8 +462,8 @@ export class MarriageBulkImporter {
         result.imported = totalInserted;
         result.skipped = recordsToInsert.length - totalInserted;
       } else {
-        result.imported = data?.length || recordsToInsert.length;
-        console.log(`✅ Batch ${Math.floor(batchOffset / this.batchSize) + 1}: ${result.imported} records inserted successfully`);
+        result.imported = insertedCount;
+        console.log(`✅ Batch ${Math.floor(batchOffset / this.batchSize) + 1}: ${result.imported} records processed (${recordsWithCerts.length} with certs, ${recordsWithoutCerts.length} without certs)`);
       }
 
     } catch (error) {
