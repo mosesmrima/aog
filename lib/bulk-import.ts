@@ -167,9 +167,10 @@ export class MarriageBulkImporter {
         qualityScore -= 5;
       }
 
-      // Skip records missing too many core fields
-      if (!marriageDate || !groomName || !brideName || !placeOfMarriage) {
-        console.warn(`Row ${rowNumber}: Missing core required fields - ${missingFields.join(', ')}`);
+      // Allow records with missing fields - they can be updated later by data entry clerks
+      // Only skip completely empty rows
+      if (!marriageDate && !groomName && !brideName && !placeOfMarriage && !certificateNumber) {
+        console.warn(`Row ${rowNumber}: Completely empty record - skipping`);
         return null;
       }
 
@@ -324,12 +325,12 @@ export class MarriageBulkImporter {
           }
           
           return {
-            marriage_date: record.marriage_date,
-            groom_name: record.groom_name,
-            bride_name: record.bride_name,
-            place_of_marriage: record.place_of_marriage,
+            marriage_date: record.marriage_date || null,
+            groom_name: record.groom_name || null,
+            bride_name: record.bride_name || null,
+            place_of_marriage: record.place_of_marriage || null,
             certificate_number: record.certificate_number || null,
-            license_type: record.license_type,
+            license_type: record.license_type || null,
             files: record.files ? JSON.stringify([{ url: record.files, name: 'Import File' }]) : JSON.stringify([]),
             created_by: this.userId,
             data_quality_score: record.data_quality_score || 100,

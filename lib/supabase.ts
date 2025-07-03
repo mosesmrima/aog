@@ -84,10 +84,10 @@ export type Database = {
       marriages: {
         Row: {
           id: string;
-          marriage_date: string;
-          groom_name: string;
-          bride_name: string;
-          place_of_marriage: string;
+          marriage_date: string | null;
+          groom_name: string | null;
+          bride_name: string | null;
+          place_of_marriage: string | null;
           certificate_number: string | null;
           license_type: string | null;
           files: any;
@@ -101,10 +101,10 @@ export type Database = {
         };
         Insert: {
           id?: string;
-          marriage_date: string;
-          groom_name: string;
-          bride_name: string;
-          place_of_marriage: string;
+          marriage_date?: string | null;
+          groom_name?: string | null;
+          bride_name?: string | null;
+          place_of_marriage?: string | null;
           certificate_number?: string | null;
           license_type?: string | null;
           files?: any;
@@ -118,10 +118,10 @@ export type Database = {
         };
         Update: {
           id?: string;
-          marriage_date?: string;
-          groom_name?: string;
-          bride_name?: string;
-          place_of_marriage?: string;
+          marriage_date?: string | null;
+          groom_name?: string | null;
+          bride_name?: string | null;
+          place_of_marriage?: string | null;
           certificate_number?: string | null;
           license_type?: string | null;
           files?: any;
