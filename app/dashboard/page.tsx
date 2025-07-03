@@ -4,8 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Sidebar } from '@/components/layout/sidebar';
-import { StatsCards } from '@/components/dashboard/stats-cards';
-import { MarriagesChart } from '@/components/dashboard/marriages-chart';
+import { AnalyticsDashboard } from '@/components/dashboard/analytics-dashboard';
 import { useAuth } from '@/components/providers/auth-provider';
 
 export default function DashboardPage() {
@@ -59,10 +58,7 @@ export default function DashboardPage() {
             </p>
           </motion.div>
 
-          <div className="space-y-8">
-            <StatsCards />
-            <MarriagesChart />
-          </div>
+          <AnalyticsDashboard />
         </div>
       </main>
     </div>

@@ -61,9 +61,6 @@ export default function Home() {
                 <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center shadow-lg">
                   <Shield className="w-6 h-6 text-white" />
                 </div>
-                <div className="text-sm font-semibold text-blue-700 tracking-wide uppercase">
-                  Government of Kenya
-                </div>
               </div>
 
               <div className="space-y-4">
@@ -105,7 +102,7 @@ export default function Home() {
               <div className="relative bg-white rounded-2xl shadow-2xl border border-gray-200 p-8">
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-gray-900">Government Data Portal</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">OAG Data Portal</h3>
                     <div className="flex space-x-2">
                       <div className="w-3 h-3 bg-red-400 rounded-full"></div>
                       <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
