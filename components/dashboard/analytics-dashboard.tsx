@@ -134,6 +134,57 @@ export function AnalyticsDashboard() {
         </div>
       </motion.div>
 
+      {/* Database Insights Summary */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+      >
+        <Card className="border-0 shadow-lg bg-gradient-to-r from-blue-50 to-indigo-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Database className="h-5 w-5 text-blue-600" />
+              Database Insights Summary
+            </CardTitle>
+            <CardDescription>Real-time analysis of your marriage registration data</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              <div className="text-center p-3 bg-white rounded-lg shadow-sm">
+                <div className="text-2xl font-bold text-blue-600">
+                  {overviewStats?.totalRecords?.toLocaleString() || "0"}
+                </div>
+                <div className="text-xs text-gray-600">Total Records</div>
+              </div>
+              <div className="text-center p-3 bg-white rounded-lg shadow-sm">
+                <div className="text-2xl font-bold text-green-600">
+                  {overviewStats ? Math.round((overviewStats.recordsWithValidDates / overviewStats.totalRecords) * 100) : 0}%
+                </div>
+                <div className="text-xs text-gray-600">Have Valid Dates</div>
+              </div>
+              <div className="text-center p-3 bg-white rounded-lg shadow-sm">
+                <div className="text-2xl font-bold text-purple-600">
+                  {overviewStats ? Math.round((overviewStats.recordsWithCertificates / overviewStats.totalRecords) * 100) : 0}%
+                </div>
+                <div className="text-xs text-gray-600">Have Certificates</div>
+              </div>
+              <div className="text-center p-3 bg-white rounded-lg shadow-sm">
+                <div className="text-2xl font-bold text-orange-600">
+                  {overviewStats ? Math.round((overviewStats.recordsWithFiles / overviewStats.totalRecords) * 100) : 0}%
+                </div>
+                <div className="text-xs text-gray-600">Have Files</div>
+              </div>
+              <div className="text-center p-3 bg-white rounded-lg shadow-sm">
+                <div className="text-2xl font-bold text-indigo-600">
+                  {Math.round(overviewStats?.avgQualityScore || 0)}%
+                </div>
+                <div className="text-xs text-gray-600">Avg Quality</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
       {/* Key Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
@@ -142,7 +193,6 @@ export function AnalyticsDashboard() {
           description="All marriage registrations"
           icon={Database}
           color="from-blue-500 to-blue-600"
-          trend={{ value: 15, isPositive: true }}
         />
         <MetricCard
           title="Added Today"
@@ -150,7 +200,6 @@ export function AnalyticsDashboard() {
           description="New registrations today"
           icon={Calendar}
           color="from-green-500 to-green-600"
-          trend={{ value: 8, isPositive: true }}
         />
         <MetricCard
           title="Quality Score"
@@ -158,7 +207,6 @@ export function AnalyticsDashboard() {
           description="Average data quality"
           icon={Target}
           color="from-purple-500 to-purple-600"
-          trend={{ value: 3, isPositive: true }}
         />
         <MetricCard
           title="With Files"
@@ -166,15 +214,15 @@ export function AnalyticsDashboard() {
           description="Records with attachments"
           icon={FileText}
           color="from-orange-500 to-orange-600"
-          trend={{ value: 12, isPositive: true }}
         />
       </div>
 
       {/* Analytics Tabs */}
       <Tabs defaultValue="trends" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 lg:w-fit lg:grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5 lg:w-fit lg:grid-cols-5">
           <TabsTrigger value="trends">Trends</TabsTrigger>
           <TabsTrigger value="quality">Quality</TabsTrigger>
+          <TabsTrigger value="missing">Missing Data</TabsTrigger>
           <TabsTrigger value="activity">Activity</TabsTrigger>
           <TabsTrigger value="insights">Insights</TabsTrigger>
         </TabsList>
@@ -403,6 +451,191 @@ export function AnalyticsDashboard() {
           </div>
         </TabsContent>
 
+        {/* Missing Data Tab */}
+        <TabsContent value="missing" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Missing Data Overview */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+            >
+              <Card className="border-0 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-red-500" />
+                    Data Completeness Issues
+                  </CardTitle>
+                  <CardDescription>Records missing critical information</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border-l-4 border-red-500">
+                      <div>
+                        <span className="font-medium text-red-800">Missing Marriage Dates</span>
+                        <p className="text-sm text-red-600">Records without valid marriage dates</p>
+                      </div>
+                      <Badge variant="destructive" className="text-lg px-3 py-1">
+                        {overviewStats?.missingDates?.toLocaleString() || "0"}
+                      </Badge>
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border-l-4 border-orange-500">
+                      <div>
+                        <span className="font-medium text-orange-800">Missing Certificate Numbers</span>
+                        <p className="text-sm text-orange-600">Records without certificate numbers</p>
+                      </div>
+                      <Badge variant="secondary" className="text-lg px-3 py-1">
+                        {overviewStats?.missingCertificates?.toLocaleString() || "0"}
+                      </Badge>
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border-l-4 border-yellow-500">
+                      <div>
+                        <span className="font-medium text-yellow-800">Missing Groom Names</span>
+                        <p className="text-sm text-yellow-600">Records without groom information</p>
+                      </div>
+                      <Badge variant="secondary" className="text-lg px-3 py-1">
+                        {overviewStats?.missingGroomNames?.toLocaleString() || "0"}
+                      </Badge>
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg border-l-4 border-purple-500">
+                      <div>
+                        <span className="font-medium text-purple-800">Missing Bride Names</span>
+                        <p className="text-sm text-purple-600">Records without bride information</p>
+                      </div>
+                      <Badge variant="secondary" className="text-lg px-3 py-1">
+                        {overviewStats?.missingBrideNames?.toLocaleString() || "0"}
+                      </Badge>
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                      <div>
+                        <span className="font-medium text-blue-800">Missing Places</span>
+                        <p className="text-sm text-blue-600">Records without marriage location</p>
+                      </div>
+                      <Badge variant="secondary" className="text-lg px-3 py-1">
+                        {overviewStats?.missingPlaces?.toLocaleString() || "0"}
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Data Completeness Chart */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+            >
+              <Card className="border-0 shadow-lg">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5 text-green-500" />
+                    Field Completeness Rates
+                  </CardTitle>
+                  <CardDescription>Percentage of records with complete data by field</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span>Certificate Numbers</span>
+                        <span>{overviewStats ? Math.round((overviewStats.recordsWithCertificates / overviewStats.totalRecords) * 100) : 0}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3">
+                        <div 
+                          className="bg-blue-500 h-3 rounded-full transition-all duration-300" 
+                          style={{ 
+                            width: `${overviewStats ? Math.round((overviewStats.recordsWithCertificates / overviewStats.totalRecords) * 100) : 0}%` 
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span>Valid Marriage Dates</span>
+                        <span>{overviewStats ? Math.round((overviewStats.recordsWithValidDates / overviewStats.totalRecords) * 100) : 0}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3">
+                        <div 
+                          className="bg-green-500 h-3 rounded-full transition-all duration-300" 
+                          style={{ 
+                            width: `${overviewStats ? Math.round((overviewStats.recordsWithValidDates / overviewStats.totalRecords) * 100) : 0}%` 
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span>Groom Names</span>
+                        <span>{overviewStats ? Math.round(((overviewStats.totalRecords - overviewStats.missingGroomNames) / overviewStats.totalRecords) * 100) : 0}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3">
+                        <div 
+                          className="bg-purple-500 h-3 rounded-full transition-all duration-300" 
+                          style={{ 
+                            width: `${overviewStats ? Math.round(((overviewStats.totalRecords - overviewStats.missingGroomNames) / overviewStats.totalRecords) * 100) : 0}%` 
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span>Bride Names</span>
+                        <span>{overviewStats ? Math.round(((overviewStats.totalRecords - overviewStats.missingBrideNames) / overviewStats.totalRecords) * 100) : 0}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3">
+                        <div 
+                          className="bg-pink-500 h-3 rounded-full transition-all duration-300" 
+                          style={{ 
+                            width: `${overviewStats ? Math.round(((overviewStats.totalRecords - overviewStats.missingBrideNames) / overviewStats.totalRecords) * 100) : 0}%` 
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span>Marriage Places</span>
+                        <span>{overviewStats ? Math.round(((overviewStats.totalRecords - overviewStats.missingPlaces) / overviewStats.totalRecords) * 100) : 0}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3">
+                        <div 
+                          className="bg-orange-500 h-3 rounded-full transition-all duration-300" 
+                          style={{ 
+                            width: `${overviewStats ? Math.round(((overviewStats.totalRecords - overviewStats.missingPlaces) / overviewStats.totalRecords) * 100) : 0}%` 
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span>File Attachments</span>
+                        <span>{overviewStats ? Math.round((overviewStats.recordsWithFiles / overviewStats.totalRecords) * 100) : 0}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3">
+                        <div 
+                          className="bg-red-500 h-3 rounded-full transition-all duration-300" 
+                          style={{ 
+                            width: `${overviewStats ? Math.round((overviewStats.recordsWithFiles / overviewStats.totalRecords) * 100) : 0}%` 
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+        </TabsContent>
+
         {/* Activity Tab */}
         <TabsContent value="activity" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -487,23 +720,37 @@ export function AnalyticsDashboard() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="p-4 bg-green-50 rounded-lg border-l-4 border-green-500">
-                  <h4 className="font-medium text-green-800">Strong Data Quality</h4>
+                  <h4 className="font-medium text-green-800">Excellent Data Quality</h4>
                   <p className="text-sm text-green-700 mt-1">
-                    Average quality score of {Math.round(overviewStats?.avgQualityScore || 0)}% indicates excellent data management practices.
+                    Average quality score of {Math.round(overviewStats?.avgQualityScore || 0)}% with {overviewStats?.totalRecords?.toLocaleString() || "0"} total records indicates excellent data management practices.
                   </p>
                 </div>
                 
                 <div className="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
-                  <h4 className="font-medium text-blue-800">Growing Registration Volume</h4>
+                  <h4 className="font-medium text-blue-800">High Certificate Completion</h4>
                   <p className="text-sm text-blue-700 mt-1">
-                    Marriage registrations have increased significantly, with 2024 showing the highest volume to date.
+                    {overviewStats ? Math.round((overviewStats.recordsWithCertificates / overviewStats.totalRecords) * 100) : 0}% of records have certificate numbers - showing strong compliance with registration requirements.
+                  </p>
+                </div>
+                
+                <div className="p-4 bg-purple-50 rounded-lg border-l-4 border-purple-500">
+                  <h4 className="font-medium text-purple-800">Excellent Date Validity</h4>
+                  <p className="text-sm text-purple-700 mt-1">
+                    {overviewStats ? Math.round((overviewStats.recordsWithValidDates / overviewStats.totalRecords) * 100) : 0}% of records have valid marriage dates, indicating thorough data validation processes.
                   </p>
                 </div>
                 
                 <div className="p-4 bg-orange-50 rounded-lg border-l-4 border-orange-500">
                   <h4 className="font-medium text-orange-800">File Attachment Opportunity</h4>
                   <p className="text-sm text-orange-700 mt-1">
-                    Only {Math.round(((overviewStats?.recordsWithFiles || 0) / (overviewStats?.totalRecords || 1)) * 100)}% of records have file attachments. Consider digitization initiatives.
+                    Only {overviewStats ? Math.round((overviewStats.recordsWithFiles / overviewStats.totalRecords) * 100) : 0}% of records have file attachments. Major digitization opportunity for {overviewStats?.totalRecords ? (overviewStats.totalRecords - overviewStats.recordsWithFiles).toLocaleString() : "0"} records.
+                  </p>
+                </div>
+                
+                <div className="p-4 bg-indigo-50 rounded-lg border-l-4 border-indigo-500">
+                  <h4 className="font-medium text-indigo-800">Strong Name Completion</h4>
+                  <p className="text-sm text-indigo-700 mt-1">
+                    Both bride and groom names are well-captured, showing comprehensive personal information collection in the registration process.
                   </p>
                 </div>
               </CardContent>
