@@ -26,7 +26,7 @@ export interface ImportResult {
 }
 
 export class MarriageBulkImporter {
-  private batchSize = 500; // Increased batch size for better performance
+  private batchSize = 50; // Smaller batch size for stability
   
   constructor(private userId: string) {}
 
@@ -247,11 +247,16 @@ export class MarriageBulkImporter {
     };
 
     try {
-      console.log(`Starting import of ${records.length} records...`);
+      console.log(`Starting import of ${records.length} records in batches of ${this.batchSize}...`);
       
       // Process in batches
       for (let i = 0; i < records.length; i += this.batchSize) {
         const batch = records.slice(i, i + this.batchSize);
+        const batchNumber = Math.floor(i / this.batchSize) + 1;
+        const totalBatches = Math.ceil(records.length / this.batchSize);
+        
+        console.log(`Processing batch ${batchNumber}/${totalBatches} (records ${i + 1}-${Math.min(i + this.batchSize, records.length)})`);
+        
         const batchResult = await this.processBatch(batch, i);
         
         result.imported += batchResult.imported;
@@ -259,11 +264,13 @@ export class MarriageBulkImporter {
         result.duplicates += batchResult.duplicates;
         result.errors.push(...batchResult.errors);
         
+        console.log(`Batch ${batchNumber} completed: ${batchResult.imported} imported, ${batchResult.skipped} skipped, ${batchResult.duplicates} duplicates, ${batchResult.errors.length} errors`);
+        
         // Update progress
         onProgress?.(result.imported, records.length);
         
         // Small delay to prevent overwhelming the database
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
       
       result.success = true;
@@ -304,14 +311,16 @@ export class MarriageBulkImporter {
       
       // Prepare records for insertion (excluding within-batch duplicates)
       const recordsToInsert = batch
-        .map((record) => {
+        .map((record, index) => {
           // Check for duplicates within this batch
-          if (record.certificate_number) {
-            if (batchCertSet.has(record.certificate_number)) {
+          if (record.certificate_number && record.certificate_number.trim()) {
+            const certNum = record.certificate_number.trim();
+            if (batchCertSet.has(certNum)) {
+              console.log(`Skipping duplicate certificate ${certNum} in batch`);
               result.duplicates++;
               return null;
             }
-            batchCertSet.add(record.certificate_number);
+            batchCertSet.add(certNum);
           }
           
           return {
@@ -319,13 +328,13 @@ export class MarriageBulkImporter {
             groom_name: record.groom_name,
             bride_name: record.bride_name,
             place_of_marriage: record.place_of_marriage,
-            certificate_number: record.certificate_number,
+            certificate_number: record.certificate_number || `AUTO_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             license_type: record.license_type,
             files: record.files ? JSON.stringify([{ url: record.files, name: 'Import File' }]) : JSON.stringify([]),
             created_by: this.userId,
             data_quality_score: record.data_quality_score || 100,
             missing_fields: record.missing_fields || [],
-            has_duplicates: false, // Will be updated later if needed
+            has_duplicates: false,
             import_warnings: record.import_warnings || []
           };
         })
@@ -336,19 +345,23 @@ export class MarriageBulkImporter {
         return result;
       }
 
-      // Batch insert with upsert to handle duplicates gracefully
+      // Simple batch insert without upsert (let database handle duplicates)
       const { data, error } = await supabase
         .from('marriages')
-        .upsert(recordsToInsert, { 
-          onConflict: 'certificate_number',
-          ignoreDuplicates: true 
-        })
+        .insert(recordsToInsert)
         .select('id');
 
       if (error) {
-        // If batch insert fails, it might be due to individual record issues
-        // Try smaller chunks or individual records for error identification
         console.warn(`Batch insert failed for batch starting at ${batchOffset}: ${error.message}`);
+        
+        // Handle specific error types
+        if (error.message.includes('duplicate key') || error.message.includes('unique constraint')) {
+          console.log('Duplicate key violation - trying individual inserts');
+        } else if (error.message.includes('null value') || error.message.includes('not-null')) {
+          console.log('Null value constraint violation');
+        } else {
+          console.log('Other database error:', error.code, error.details);
+        }
         
         // Split into smaller chunks for retry
         const chunkSize = Math.max(1, Math.floor(recordsToInsert.length / 4));
@@ -360,10 +373,7 @@ export class MarriageBulkImporter {
           try {
             const { data: chunkData, error: chunkError } = await supabase
               .from('marriages')
-              .upsert(chunk, { 
-                onConflict: 'certificate_number',
-                ignoreDuplicates: true 
-              })
+              .insert(chunk)
               .select('id');
               
             if (chunkError) {
@@ -372,10 +382,7 @@ export class MarriageBulkImporter {
                 try {
                   const { error: individualError } = await supabase
                     .from('marriages')
-                    .upsert([chunk[j]], { 
-                      onConflict: 'certificate_number',
-                      ignoreDuplicates: true 
-                    });
+                    .insert([chunk[j]]);
                     
                   if (individualError) {
                     result.errors.push({
