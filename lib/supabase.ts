@@ -90,7 +90,7 @@ export type Database = {
           place_of_marriage: string | null;
           certificate_number: string | null;
           license_type: string | null;
-          files: any;
+          files: string | null;
           created_by: string | null;
           created_at: string;
           updated_at: string;
@@ -107,7 +107,7 @@ export type Database = {
           place_of_marriage?: string | null;
           certificate_number?: string | null;
           license_type?: string | null;
-          files?: any;
+          files?: string | null;
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -124,7 +124,7 @@ export type Database = {
           place_of_marriage?: string | null;
           certificate_number?: string | null;
           license_type?: string | null;
-          files?: any;
+          files?: string | null;
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;

@@ -25,6 +25,7 @@ export default function MarriagesPage() {
   const [importProgress, setImportProgress] = useState(0);
   const [isImporting, setIsImporting] = useState(false);
   const [importResult, setImportResult] = useState<any>(null);
+  const [currentImporter, setCurrentImporter] = useState<any>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -83,6 +84,7 @@ export default function MarriagesPage() {
       // Initialize importer
       console.log('Initializing importer with user ID:', user.id);
       const importer = new MarriageBulkImporter(user.id);
+      setCurrentImporter(importer);
       
       // Parse CSV data
       console.log('Parsing CSV data...');
@@ -154,6 +156,7 @@ export default function MarriagesPage() {
       });
     } finally {
       setIsImporting(false);
+      setCurrentImporter(null);
       // Reset the input
       event.target.value = '';
     }
@@ -314,12 +317,32 @@ export default function MarriagesPage() {
                               <p className="text-sm text-gray-600">Processing marriage records...</p>
                             </div>
                             
-                            <div className="space-y-2">
-                              <div className="flex justify-between text-sm">
-                                <span>Progress</span>
-                                <span>{importProgress}%</span>
+                            <div className="space-y-4">
+                              <div className="space-y-2">
+                                <div className="flex justify-between text-sm">
+                                  <span>Progress</span>
+                                  <span>{importProgress}%</span>
+                                </div>
+                                <Progress value={importProgress} className="w-full" />
                               </div>
-                              <Progress value={importProgress} className="w-full" />
+                              
+                              <div className="flex justify-center">
+                                <Button
+                                  variant="outline"
+                                  onClick={() => {
+                                    if (currentImporter) {
+                                      currentImporter.cancel();
+                                      toast({
+                                        title: 'Import cancelled',
+                                        description: 'The import process has been cancelled.',
+                                      });
+                                    }
+                                  }}
+                                  className="text-red-600 border-red-300 hover:bg-red-50"
+                                >
+                                  Cancel Import
+                                </Button>
+                              </div>
                             </div>
                           </div>
                         )}

@@ -11,17 +11,17 @@ import {
   AlertTriangle, 
   CheckCircle, 
   XCircle,
-  Filter,
   ChevronLeft,
   ChevronRight,
   RotateCcw,
-  Info
+  Info,
+  Eye,
+  ExternalLink
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -38,7 +38,6 @@ export function OptimizedMarriagesTable({ onEdit, onAdd }: OptimizedMarriagesTab
     searchField: 'all'
   });
   const [pagination, setPagination] = useState({ page: 1, pageSize: 20 });
-  const [showFilters, setShowFilters] = useState(false);
 
   const { toast } = useToast();
   const { data: marriagesData, isLoading } = useMarriages(filters, pagination);
@@ -129,18 +128,6 @@ export function OptimizedMarriagesTable({ onEdit, onAdd }: OptimizedMarriagesTab
     setPagination({ page: 1, pageSize: parseInt(newPageSize) });
   };
 
-  if (isLoading) {
-    return (
-      <Card className="backdrop-blur-lg bg-white/80 border-white/20 shadow-lg">
-        <CardContent className="p-8">
-          <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   const marriages = marriagesData?.data || [];
   const totalPages = marriagesData?.totalPages || 1;
   const currentPage = marriagesData?.currentPage || 1;
@@ -162,16 +149,7 @@ export function OptimizedMarriagesTable({ onEdit, onAdd }: OptimizedMarriagesTab
                 {totalCount} total records • Page {currentPage} of {totalPages}
               </CardDescription>
             </div>
-            <div className="flex space-x-2">
-              <Button onClick={() => setShowFilters(!showFilters)} variant="outline" size="sm">
-                <Filter className="h-4 w-4 mr-2" />
-                Filters
-              </Button>
-              <Button onClick={onAdd} className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Marriage
-              </Button>
-            </div>
+            <div></div>
           </div>
 
           {/* Search and Filters */}
@@ -228,59 +206,6 @@ export function OptimizedMarriagesTable({ onEdit, onAdd }: OptimizedMarriagesTab
               </Select>
             </div>
 
-            {/* Advanced Filters */}
-            {showFilters && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg"
-              >
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Date From</label>
-                  <Input
-                    type="date"
-                    value={filters.dateFrom || ''}
-                    onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Date To</label>
-                  <Input
-                    type="date"
-                    value={filters.dateTo || ''}
-                    onChange={(e) => handleFilterChange('dateTo', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Min Quality Score</label>
-                  <Select
-                    value={filters.qualityScore?.toString()}
-                    onValueChange={(value) => handleFilterChange('qualityScore', value ? parseInt(value) : undefined)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Any" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">Any Quality</SelectItem>
-                      <SelectItem value="90">High (90+)</SelectItem>
-                      <SelectItem value="70">Medium (70+)</SelectItem>
-                      <SelectItem value="0">Low (All)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-end">
-                  <Button
-                    variant="outline"
-                    onClick={resetFilters}
-                    className="w-full"
-                  >
-                    <RotateCcw className="h-4 w-4 mr-2" />
-                    Reset
-                  </Button>
-                </div>
-              </motion.div>
-            )}
           </div>
         </CardHeader>
 
@@ -300,17 +225,36 @@ export function OptimizedMarriagesTable({ onEdit, onAdd }: OptimizedMarriagesTab
                   <TableHeader>
                     <TableRow>
                       <TableHead>Quality</TableHead>
-                      <TableHead>Certificate #</TableHead>
+                      <TableHead>Certificate No.</TableHead>
                       <TableHead>Groom</TableHead>
                       <TableHead>Bride</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>Place</TableHead>
                       <TableHead>License Type</TableHead>
+                      <TableHead>Files</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {marriages.map((marriage: Marriage) => {
+                    {isLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={9} className="text-center py-8">
+                          <div className="flex items-center justify-center space-x-2">
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500" />
+                            <span className="text-muted-foreground">Searching...</span>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : marriages.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={9} className="text-center py-8">
+                          <div className="text-muted-foreground">
+                            {filters.search ? 'No matching records found' : 'No marriage records found'}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      marriages.map((marriage: Marriage) => {
                       const qualityIndicator = getQualityIndicator(marriage);
                       const QualityIcon = qualityIndicator.icon;
                       
@@ -334,18 +278,40 @@ export function OptimizedMarriagesTable({ onEdit, onAdd }: OptimizedMarriagesTab
                           <TableCell>{marriage.groom_name}</TableCell>
                           <TableCell>{marriage.bride_name}</TableCell>
                           <TableCell>
-                            {format(new Date(marriage.marriage_date), 'MMM dd, yyyy')}
+                            {marriage.marriage_date && marriage.marriage_date !== '1970-01-01' ? 
+                              format(new Date(marriage.marriage_date), 'MMM dd, yyyy') : 
+                              '-'
+                            }
                           </TableCell>
                           <TableCell>{marriage.place_of_marriage}</TableCell>
                           <TableCell>
-                            {marriage.license_type ? (
-                              <Badge variant="secondary">{marriage.license_type}</Badge>
+                            {marriage.license_type || '-'}
+                          </TableCell>
+                          <TableCell>
+                            {marriage.files ? (
+                              <a
+                                href={marriage.files}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center text-blue-600 hover:text-blue-800 underline"
+                              >
+                                <ExternalLink className="h-4 w-4 mr-1" />
+                                View
+                              </a>
                             ) : (
                               <span className="text-muted-foreground">-</span>
                             )}
                           </TableCell>
                           <TableCell>
                             <div className="flex space-x-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => onEdit(marriage)}
+                                title="View Details"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -381,7 +347,8 @@ export function OptimizedMarriagesTable({ onEdit, onAdd }: OptimizedMarriagesTab
                           </TableCell>
                         </TableRow>
                       );
-                    })}
+                    })
+                    )}
                   </TableBody>
                 </Table>
               </div>

@@ -194,9 +194,6 @@ export function Sidebar() {
               })()}
               <span className="font-medium">{primaryDepartment.name}</span>
             </div>
-            <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
-              Full Access
-            </span>
           </Link>
         )}
 
@@ -236,9 +233,6 @@ export function Sidebar() {
                       <Icon className="h-4 w-4" />
                       <span>{dept.name}</span>
                     </div>
-                    <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full">
-                      View Only
-                    </span>
                   </Link>
                 );
               })}
