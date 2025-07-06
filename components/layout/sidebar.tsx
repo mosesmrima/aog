@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -16,21 +16,53 @@ import {
   FileText,
   ChevronDown,
   ChevronRight,
-  Database
+  Scale
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useAuth } from '@/components/providers/auth-provider';
 import { signOut } from '@/lib/auth';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/lib/supabase';
 
-// Fixed navigation items (non-department specific)
+// Main navigation items
 const baseNavigation = [
   {
     name: 'Dashboard',
     href: '/dashboard',
     icon: LayoutDashboard,
+    description: 'Organization overview'
+  },
+];
+
+// Department navigation items - all departments shown prominently
+const departmentNavigation = [
+  {
+    name: 'Marriages',
+    href: '/departments/marriages',
+    icon: Heart,
+    description: 'Marriage registrations and certificates',
+    fullName: 'Registrar of Marriages'
+  },
+  {
+    name: 'Legal Affairs',
+    href: '/departments/legal-affairs',
+    icon: Scale,
+    description: 'Government cases and litigation',
+    fullName: 'Legal Affairs'
+  },
+  {
+    name: 'Societies',
+    href: '/departments/societies',
+    icon: Users,
+    description: 'Society registrations and compliance',
+    fullName: 'Registrar of Societies'
+  },
+  {
+    name: 'Administration',
+    href: '/departments/administration',
+    icon: Settings,
+    description: 'Administrative and support functions',
+    fullName: 'Administration'
   },
 ];
 
@@ -52,82 +84,17 @@ const adminNavigation = [
   },
 ];
 
-interface Department {
-  id: string;
-  name: string;
-  description: string | null;
-}
-
 export function Sidebar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [isOtherDepartmentsOpen, setIsOtherDepartmentsOpen] = useState(false);
+  const [isAdminSectionOpen, setIsAdminSectionOpen] = useState(false);
   const pathname = usePathname();
   const { user } = useAuth();
-
-  useEffect(() => {
-    fetchDepartments();
-  }, []);
-
-  const fetchDepartments = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('departments')
-        .select('id, name, description')
-        .order('name');
-
-      if (error) throw error;
-      setDepartments(data || []);
-    } catch (error) {
-      console.error('Error fetching departments:', error);
-    }
-  };
 
   const handleSignOut = async () => {
     try {
       await signOut();
     } catch (error) {
       console.error('Error signing out:', error);
-    }
-  };
-
-  // Get user's assigned departments
-  const userDepartments = user?.departments || [];
-  
-  // Get primary department (for direct navigation)
-  const primaryDepartment = departments.find(dept => userDepartments.includes(dept.name));
-  
-  // Get other departments (for dropdown)
-  const otherDepartments = departments.filter(dept => !userDepartments.includes(dept.name));
-
-  const getDepartmentRoute = (deptName: string) => {
-    // Map department names to routes
-    switch (deptName) {
-      case 'Registrar of Marriages':
-        return '/marriages';
-      case 'Registrar of Societies':
-        return '/societies';
-      case 'Legal Affairs':
-        return '/legal';
-      case 'Administration':
-        return '/administration';
-      default:
-        return `/department/${deptName.toLowerCase().replace(/\s+/g, '-')}`;
-    }
-  };
-
-  const getDepartmentIcon = (deptName: string) => {
-    switch (deptName) {
-      case 'Registrar of Marriages':
-        return Heart;
-      case 'Registrar of Societies':
-        return Users;
-      case 'Legal Affairs':
-        return Shield;
-      case 'Administration':
-        return Settings;
-      default:
-        return Database;
     }
   };
 
@@ -154,9 +121,9 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 p-4 space-y-2">
-        {/* Base Navigation */}
+        {/* Main Dashboard */}
         {baseNavigation.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+          const isActive = pathname === item.href;
           return (
             <Link
               key={item.name}
@@ -170,129 +137,146 @@ export function Sidebar() {
               )}
             >
               <item.icon className="h-5 w-5" />
-              <span className="font-medium">{item.name}</span>
+              <div>
+                <span className="font-medium">{item.name}</span>
+                <div className="text-xs opacity-75">{item.description}</div>
+              </div>
             </Link>
           );
         })}
 
-        {/* Primary Department (if user has one) */}
-        {primaryDepartment && (
-          <Link
-            href={getDepartmentRoute(primaryDepartment.name)}
-            onClick={() => setIsMobileMenuOpen(false)}
-            className={cn(
-              'flex items-center justify-between px-3 py-2 rounded-lg transition-colors duration-200',
-              pathname === getDepartmentRoute(primaryDepartment.name) || pathname.startsWith(getDepartmentRoute(primaryDepartment.name) + '/')
-                ? 'bg-blue-500 text-white shadow-lg'
-                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-            )}
-          >
-            <div className="flex items-center space-x-3">
-              {(() => {
-                const Icon = getDepartmentIcon(primaryDepartment.name);
-                return <Icon className="h-5 w-5" />;
-              })()}
-              <span className="font-medium">{primaryDepartment.name}</span>
-            </div>
-          </Link>
-        )}
-
-        {/* Other Departments Dropdown */}
-        {otherDepartments.length > 0 && (
-          <Collapsible open={isOtherDepartmentsOpen} onOpenChange={setIsOtherDepartmentsOpen}>
-            <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors duration-200">
-              <div className="flex items-center space-x-3">
-                <Database className="h-5 w-5" />
-                <span className="font-medium">Other Departments</span>
-              </div>
-              {isOtherDepartmentsOpen ? (
-                <ChevronDown className="h-4 w-4" />
-              ) : (
-                <ChevronRight className="h-4 w-4" />
-              )}
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-1 mt-1">
-              {otherDepartments.map((dept) => {
-                const route = getDepartmentRoute(dept.name);
-                const isActive = pathname === route || pathname.startsWith(route + '/');
-                const Icon = getDepartmentIcon(dept.name);
+        {/* Department Navigation */}
+        <div className="pt-4 mt-4 border-t border-gray-200">
+          <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            Departments
+          </div>
+          {departmentNavigation.map((item) => {
+            const isActive = pathname.startsWith(item.href);
+            return (
+              <div key={item.name}>
+                <Link
+                  href={`${item.href}/dashboard`}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={cn(
+                    'flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors duration-200 group',
+                    isActive
+                      ? 'bg-blue-500 text-white shadow-lg'
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  )}
+                >
+                  <item.icon className="h-5 w-5" />
+                  <div className="flex-1">
+                    <span className="font-medium">{item.name}</span>
+                    <div className="text-xs opacity-75">{item.description}</div>
+                  </div>
+                  <ChevronRight className={cn(
+                    "h-4 w-4 transition-transform",
+                    isActive ? "rotate-90" : ""
+                  )} />
+                </Link>
                 
-                return (
-                  <Link
-                    key={dept.id}
-                    href={route}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className={cn(
-                      'flex items-center justify-between pl-8 pr-3 py-2 rounded-lg transition-colors duration-200 text-sm',
-                      isActive
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
-                    )}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <Icon className="h-4 w-4" />
-                      <span>{dept.name}</span>
-                    </div>
-                  </Link>
-                );
-              })}
-            </CollapsibleContent>
-          </Collapsible>
-        )}
+                {/* Sub-navigation for active department */}
+                {isActive && (
+                  <div className="ml-8 mt-1 space-y-1">
+                    <Link
+                      href={`${item.href}/dashboard`}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={cn(
+                        'block px-3 py-1 rounded text-sm transition-colors duration-200',
+                        pathname === `${item.href}/dashboard`
+                          ? 'bg-blue-100 text-blue-700 font-medium'
+                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      )}
+                    >
+                      Dashboard
+                    </Link>
+                    <Link
+                      href={`${item.href}/manage`}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={cn(
+                        'block px-3 py-1 rounded text-sm transition-colors duration-200',
+                        pathname === `${item.href}/manage`
+                          ? 'bg-blue-100 text-blue-700 font-medium'
+                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      )}
+                    >
+                      Manage Data
+                    </Link>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
 
         {/* Admin Navigation */}
         {user?.is_admin && (
-          <>
-            <div className="pt-4 border-t border-gray-200">
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider px-3 mb-2">
-                Administration
-              </p>
-              {adminNavigation.map((item) => {
-                const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className={cn(
-                      'flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors duration-200',
-                      isActive
-                        ? 'bg-purple-500 text-white shadow-lg'
-                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                    )}
-                  >
-                    <item.icon className="h-5 w-5" />
-                    <span className="font-medium">{item.name}</span>
-                  </Link>
-                );
-              })}
+          <Collapsible open={isAdminSectionOpen} onOpenChange={setIsAdminSectionOpen}>
+            <div className="pt-4 mt-4 border-t border-gray-200">
+              <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors duration-200">
+                <div className="flex items-center space-x-3">
+                  <Shield className="h-5 w-5" />
+                  <span className="font-medium text-xs uppercase tracking-wider">Administration</span>
+                </div>
+                {isAdminSectionOpen ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-1 mt-1">
+                {adminNavigation.map((item) => {
+                  const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={cn(
+                        'flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors duration-200',
+                        isActive
+                          ? 'bg-red-500 text-white shadow-lg'
+                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                      )}
+                    >
+                      <item.icon className="h-5 w-5" />
+                      <span className="font-medium">{item.name}</span>
+                    </Link>
+                  );
+                })}
+              </CollapsibleContent>
             </div>
-          </>
+          </Collapsible>
         )}
       </nav>
 
-      {user && (
-        <div className="p-4 border-t border-white/10">
-          <div className="mb-3">
-            <p className="text-sm font-medium text-gray-800">{user.full_name}</p>
-            <p className="text-xs text-gray-500">{user.email}</p>
-            {user.is_admin && (
-              <span className="inline-block px-2 py-1 text-xs bg-purple-100 text-purple-800 rounded-full mt-1">
-                Admin
-              </span>
-            )}
+      {/* User Info & Sign Out */}
+      <div className="p-4 border-t border-gray-200">
+        <div className="flex items-center space-x-3 mb-3">
+          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+            <span className="text-white text-sm font-medium">
+              {user?.full_name?.charAt(0) || 'U'}
+            </span>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full"
-            onClick={handleSignOut}
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            Sign Out
-          </Button>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-gray-900 truncate">
+              {user?.full_name || 'User'}
+            </p>
+            <p className="text-xs text-gray-500 truncate">
+              {user?.email}
+            </p>
+          </div>
         </div>
-      )}
+        <Button
+          onClick={handleSignOut}
+          variant="outline"
+          size="sm"
+          className="w-full"
+        >
+          <LogOut className="h-4 w-4 mr-2" />
+          Sign Out
+        </Button>
+      </div>
     </div>
   );
 

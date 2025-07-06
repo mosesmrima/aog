@@ -95,7 +95,7 @@ export default function RegistriesPage() {
       <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-700">
         <div className="absolute inset-0 bg-grid-white/10 [mask-image:linear-gradient(0deg,transparent,rgba(255,255,255,0.1))]" />
         
-        <div className="relative container mx-auto px-4 py-16 lg:py-20">
+        <div className="relative container mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -108,28 +108,28 @@ export default function RegistriesPage() {
               </div>
             </div>
             
-            <h1 className="text-4xl lg:text-6xl font-bold text-white mb-6">
+            <h1 className="text-3xl sm:text-4xl lg:text-6xl font-bold text-white mb-6">
               Public Registries Portal
             </h1>
-            <p className="text-xl text-blue-100 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-lg sm:text-xl text-blue-100 max-w-3xl mx-auto leading-relaxed">
               Access and verify records from the Office of the Attorney General's official registries. 
               Search marriages, court cases, societies, and more with appropriate privacy protections.
             </p>
             
-            <div className="flex items-center justify-center mt-8 space-x-8">
+            <div className="flex flex-col sm:flex-row items-center justify-center mt-8 space-y-4 sm:space-y-0 sm:space-x-8">
               <div className="text-center">
-                <div className="text-3xl font-bold text-white">
+                <div className="text-2xl sm:text-3xl font-bold text-white">
                   {registries.reduce((sum, reg) => sum + reg.recordCount, 0).toLocaleString()}
                 </div>
-                <div className="text-blue-200 text-sm">Total Records</div>
+                <div className="text-blue-200 text-xs sm:text-sm">Total Records</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-white">{registries.length}</div>
-                <div className="text-blue-200 text-sm">Active Registries</div>
+                <div className="text-2xl sm:text-3xl font-bold text-white">{registries.length}</div>
+                <div className="text-blue-200 text-xs sm:text-sm">Active Registries</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-white">24/7</div>
-                <div className="text-blue-200 text-sm">Public Access</div>
+                <div className="text-2xl sm:text-3xl font-bold text-white">24/7</div>
+                <div className="text-blue-200 text-xs sm:text-sm">Public Access</div>
               </div>
             </div>
           </motion.div>
@@ -137,7 +137,7 @@ export default function RegistriesPage() {
       </div>
 
       {/* Registries Grid */}
-      <div className="container mx-auto px-4 py-12 lg:py-16">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -151,7 +151,7 @@ export default function RegistriesPage() {
           </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 max-w-6xl mx-auto">
           {registries.map((registry, index) => {
             const Icon = registry.icon;
             return (
@@ -164,11 +164,13 @@ export default function RegistriesPage() {
               >
                 <Card className="h-full border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 bg-white/80 backdrop-blur-sm">
                   <CardHeader className="pb-4">
-                    <div className="flex items-start justify-between mb-4">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4 space-y-3 sm:space-y-0">
                       <div className={`w-14 h-14 bg-gradient-to-br ${registry.color} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
                         <Icon className="w-7 h-7 text-white" />
                       </div>
-                      {getAccessBadge(registry.accessLevel)}
+                      <div className="sm:ml-2">
+                        {getAccessBadge(registry.accessLevel)}
+                      </div>
                     </div>
                     
                     <CardTitle className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">

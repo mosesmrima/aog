@@ -52,9 +52,7 @@ export default function DashboardPage() {
               Welcome back, {user.full_name}
             </h1>
             <p className="text-gray-600">
-              {user.departments && user.departments.length > 0 && (
-                <>Assigned to: {user.departments.join(', ')}</>
-              )}
+              Office of the Attorney General - Data Management Portal
             </p>
           </motion.div>
 

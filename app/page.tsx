@@ -15,7 +15,12 @@ import {
   CheckCircle,
   Building2,
   Globe,
-  TrendingUp
+  TrendingUp,
+  Heart,
+  Scale,
+  BookOpen,
+  ExternalLink,
+  MapPin
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -260,6 +265,134 @@ export default function Home() {
               </motion.div>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* Public Registries Section */}
+      <div className="py-20 bg-gradient-to-br from-slate-50 to-blue-50">
+        <div className="container mx-auto px-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+              Public Registries
+            </h2>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+              Access public records and registries managed by the Office of the Attorney General. 
+              Search and view publicly available information across various departments.
+            </p>
+          </motion.div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[
+              {
+                icon: Heart,
+                title: 'Marriage Registry',
+                description: 'Search and view public marriage records, certificates, and registration information.',
+                color: 'pink',
+                href: '/registries/marriages'
+              },
+              {
+                icon: Users,
+                title: 'Societies Registry',
+                description: 'Browse registered societies, organizations, and their compliance status.',
+                color: 'green',
+                href: '/registries/societies'
+              },
+              {
+                icon: Scale,
+                title: 'Legal Affairs Registry',
+                description: 'Access public legal documents, case information, and court records.',
+                color: 'blue',
+                href: '/registries/legal-affairs'
+              },
+              {
+                icon: MapPin,
+                title: 'Land Cases Analysis',
+                description: 'Comprehensive thematic analysis of land-related litigation and case trends.',
+                color: 'amber',
+                href: '/registries/land-cases'
+              },
+              {
+                icon: BookOpen,
+                title: 'Public Documents',
+                description: 'View official publications, legal notices, and regulatory documents.',
+                color: 'purple',
+                href: '/registries/documents'
+              },
+              {
+                icon: Building2,
+                title: 'Corporate Registry',
+                description: 'Search corporate entities, business registrations, and compliance records.',
+                color: 'orange',
+                href: '/registries/corporations'
+              },
+              {
+                icon: FileSearch,
+                title: 'Search All Records',
+                description: 'Comprehensive search across all public registries and databases.',
+                color: 'indigo',
+                href: '/registries/search'
+              },
+            ].map((registry, index) => (
+              <motion.div
+                key={registry.title}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 + index * 0.1 }}
+                className="group relative bg-white rounded-xl p-6 border border-gray-200 shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer"
+                onClick={() => router.push(registry.href)}
+              >
+                <div className={`w-12 h-12 bg-gradient-to-br from-${registry.color}-500 to-${registry.color}-600 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
+                  <registry.icon className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
+                  {registry.title}
+                  <ExternalLink className="w-4 h-4 ml-2 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </h3>
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  {registry.description}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.5 }}
+            className="text-center mt-12"
+          >
+            <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm max-w-2xl mx-auto">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Need Help with Public Records?
+              </h3>
+              <p className="text-gray-600 text-sm mb-4">
+                Our public registry system is designed to provide easy access to government records. 
+                Contact us if you need assistance with your search or have questions about available records.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Button
+                  onClick={() => router.push('/registries/search')}
+                  variant="outline"
+                  className="border-blue-200 text-blue-600 hover:bg-blue-50"
+                >
+                  Start Searching
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+                <Button
+                  onClick={() => router.push('/registries/help')}
+                  variant="outline"
+                  className="border-gray-200 text-gray-600 hover:bg-gray-50"
+                >
+                  Get Help
+                </Button>
+              </div>
+            </div>
+          </motion.div>
         </div>
       </div>
 

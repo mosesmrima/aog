@@ -99,11 +99,61 @@ export default function AdoptionsRegistryPage() {
           </Card>
         </motion.div>
 
-        {/* Statistics Overview */}
+        {/* Yearly Breakdown */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.3 }}
+          className="mb-8"
+        >
+          <Card className="border-0 shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-blue-600" />
+                Adoption Statistics by Year (2020-2025)
+              </CardTitle>
+              <CardDescription>Breakdown of adoptions by gender and year</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-2">Year</th>
+                      <th className="text-center py-2">Female</th>
+                      <th className="text-center py-2">Male</th>
+                      <th className="text-center py-2">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stats.yearlyBreakdown.map((year) => (
+                      <tr key={year.year} className="border-b">
+                        <td className="py-2 font-medium">{year.year}</td>
+                        <td className="text-center py-2">{year.female}</td>
+                        <td className="text-center py-2">{year.male}</td>
+                        <td className="text-center py-2 font-semibold">{year.total}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t-2 font-bold">
+                      <td className="py-2">Total</td>
+                      <td className="text-center py-2">{stats.yearlyBreakdown.reduce((sum, year) => sum + year.female, 0)}</td>
+                      <td className="text-center py-2">{stats.yearlyBreakdown.reduce((sum, year) => sum + year.male, 0)}</td>
+                      <td className="text-center py-2">{stats.totalAdoptions}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Statistics Overview */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
           className="grid lg:grid-cols-2 gap-8 mb-8"
         >
           {/* Age Group Distribution */}
@@ -175,7 +225,7 @@ export default function AdoptionsRegistryPage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.4 }}
+          transition={{ duration: 0.6, delay: 0.5 }}
           className="grid lg:grid-cols-2 gap-8 mb-8"
         >
           <Card className="border-0 shadow-lg">
@@ -277,7 +327,7 @@ export default function AdoptionsRegistryPage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.5 }}
+          transition={{ duration: 0.6, delay: 0.6 }}
         >
           <Card className="border-0 shadow-lg">
             <CardHeader>
@@ -290,37 +340,53 @@ export default function AdoptionsRegistryPage() {
             <CardContent>
               <div className="grid md:grid-cols-2 gap-8">
                 <div>
-                  <h3 className="font-semibold mb-4">Eligibility Requirements</h3>
+                  <h3 className="font-semibold mb-4">Eligibility Requirements (Children Act 2022)</h3>
                   <ul className="space-y-2 text-sm text-gray-600">
-                    <li>• Must be at least 25 years old</li>
+                    <li>• Age 25-65 years (couples: one must be 25+, other 21+)</li>
+                    <li>• Single applicants must be at least 35 years old</li>
                     <li>• At least 21 years older than the child</li>
-                    <li>• Stable income and housing</li>
-                    <li>• Clean criminal background check</li>
-                    <li>• Completed home study assessment</li>
-                    <li>• Character references required</li>
+                    <li>• Child must be at least 6 weeks old</li>
+                    <li>• Child in continuous care for 3+ months in Kenya</li>
+                    <li>• Sound mind and good character</li>
+                    <li>• Financial stability demonstrated</li>
+                    <li>• No criminal record for sexual offences, assault, etc.</li>
+                    <li>• Only married couples or single persons (no unmarried couples)</li>
                   </ul>
                 </div>
                 
                 <div>
                   <h3 className="font-semibold mb-4">Required Documentation</h3>
                   <ul className="space-y-2 text-sm text-gray-600">
-                    <li>• Birth certificate and ID documents</li>
-                    <li>• Marriage certificate (if applicable)</li>
+                    <li>• National ID and birth certificate</li>
+                    <li>• Marriage certificate (if married)</li>
                     <li>• Medical and psychological reports</li>
-                    <li>• Financial statements</li>
-                    <li>• Employment verification</li>
-                    <li>• References from community members</li>
+                    <li>• Financial statements and employment verification</li>
+                    <li>• Character references from community</li>
+                    <li>• Police clearance certificate</li>
+                    <li>• Home study report from registered adoption society</li>
+                    <li>• Certificate declaring child free for adoption</li>
+                    <li>• Consent forms from relevant parties</li>
                   </ul>
                 </div>
               </div>
 
-              <div className="mt-8 p-4 bg-indigo-50 rounded-lg">
-                <h4 className="font-semibold text-indigo-900 mb-2">Contact Information</h4>
-                <p className="text-sm text-indigo-800">
-                  For adoption inquiries, applications, or legal assistance, contact the Department of Children's Services 
-                  or consult with a qualified adoption attorney. All adoption records and proceedings are handled through 
-                  official government channels with strict confidentiality protocols.
-                </p>
+              <div className="mt-8 space-y-4">
+                <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+                  <h4 className="font-semibold text-amber-900 mb-2">Legal Framework</h4>
+                  <p className="text-sm text-amber-800">
+                    Adoption in Kenya is governed by the Children Act 2022, Constitution of Kenya 2010, and Hague Convention on Inter-Country Adoptions. 
+                    All proceedings are conducted through the High Court with jurisdiction over children matters.
+                  </p>
+                </div>
+                
+                <div className="p-4 bg-indigo-50 rounded-lg">
+                  <h4 className="font-semibold text-indigo-900 mb-2">Contact Information</h4>
+                  <p className="text-sm text-indigo-800">
+                    For adoption inquiries, contact the Department of Children's Services or registered adoption societies. 
+                    Only registered adoption agencies can legally arrange adoptions. All records are strictly confidential 
+                    and handled through official government channels.
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>
