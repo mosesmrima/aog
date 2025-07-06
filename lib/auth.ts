@@ -115,35 +115,97 @@ export async function signOut() {
 }
 
 export async function getCurrentUser(): Promise<User | null> {
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  if (!user) return null;
+  try {
+    // First check if we have a valid session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError) {
+      console.error('Session error in getCurrentUser:', sessionError);
+      return null;
+    }
+    
+    if (!session) {
+      console.log('No session found in getCurrentUser');
+      return null;
+    }
 
-  // First, get the user profile
-  const { data: profile } = await supabase
-    .from('user_profiles')
-    .select('*')
-    .eq('id', user.id)
-    .maybeSingle();
+    // Get user from session
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError) {
+      console.error('User error in getCurrentUser:', userError);
+      return null;
+    }
+    
+    if (!user) {
+      console.log('No user found in getCurrentUser');
+      return null;
+    }
 
-  if (!profile) return null;
+    // Add timeout for database queries (5 seconds)
+    const dbTimeout = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Database query timeout')), 5000)
+    );
 
-  // Then, get their department assignments separately (left join equivalent)
-  const { data: userDepartments } = await supabase
-    .from('user_departments')
-    .select(`
-      departments (name)
-    `)
-    .eq('user_id', user.id);
+    try {
+      // Get user profile with timeout
+      const profilePromise = supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
 
-  return {
-    id: profile.id,
-    email: profile.email,
-    full_name: profile.full_name,
-    is_admin: profile.is_admin,
-    is_approved: profile.is_approved,
-    departments: userDepartments?.map((ud: any) => ud.departments.name) || [],
-  };
+      const { data: profile, error: profileError } = await Promise.race([
+        profilePromise,
+        dbTimeout
+      ]) as any;
+
+      if (profileError) {
+        console.error('Profile query error:', profileError);
+        return null;
+      }
+
+      if (!profile) {
+        console.log('No profile found for user:', user.id);
+        return null;
+      }
+
+      // Get department assignments with timeout
+      const departmentsPromise = supabase
+        .from('user_departments')
+        .select(`
+          departments (name)
+        `)
+        .eq('user_id', user.id);
+
+      const { data: userDepartments, error: deptError } = await Promise.race([
+        departmentsPromise,
+        dbTimeout
+      ]) as any;
+
+      if (deptError) {
+        console.warn('Department query error (non-critical):', deptError);
+        // Continue without departments if this fails
+      }
+
+      return {
+        id: profile.id,
+        email: profile.email,
+        full_name: profile.full_name,
+        is_admin: profile.is_admin,
+        is_approved: profile.is_approved,
+        departments: userDepartments?.map((ud: any) => ud.departments.name) || [],
+      };
+
+    } catch (timeoutError) {
+      console.error('Database timeout in getCurrentUser:', timeoutError);
+      return null;
+    }
+
+  } catch (error) {
+    console.error('Unexpected error in getCurrentUser:', error);
+    return null;
+  }
 }
 
 export async function getDepartments() {
