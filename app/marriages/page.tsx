@@ -186,7 +186,8 @@ export default function MarriagesPage() {
     window.URL.revokeObjectURL(url);
   };
 
-  const hasEditAccess = user?.departments?.includes('Registrar of Marriages') || user?.is_admin;
+  // Remove department-based access control - now open to all authenticated users
+  const hasEditAccess = user?.is_approved;
 
   if (isLoading) {
     return (
