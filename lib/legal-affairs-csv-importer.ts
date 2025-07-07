@@ -158,23 +158,29 @@ export class LegalAffairsCSVImporter {
         
         const batch = records.slice(i, Math.min(i + batchSize, records.length));
         
-        for (const record of batch) {
+        for (let j = 0; j < batch.length; j++) {
+          const record = batch[j];
+          const currentRowNumber = i + j + 1;
+          
           try {
-            const normalized = this.normalizeRecord(record, fileName || 'unknown.csv', batchId);
-            
-            // Check for duplicates
-            const isDuplicate = await this.checkForDuplicate(normalized.ag_file_reference);
-            
-            if (isDuplicate) {
-              result.duplicates++;
-              continue;
+            // Special debugging for first few rows
+            if (currentRowNumber <= 3) {
+              console.log(`Processing row ${currentRowNumber}:`, record);
             }
             
+            const normalized = this.normalizeRecord(record, fileName || 'unknown.csv', batchId);
+            
+            // Always add records - we'll use upsert to handle duplicates
+            // This allows updating existing records with new/additional information
             normalizedRecords.push(normalized);
             
           } catch (error) {
-            result.errors.push(`Row ${i + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            result.errors.push(`Row ${currentRowNumber}: ${errorMessage}`);
             result.skipped++;
+            
+            // For debugging: log the problematic record structure
+            console.warn(`Failed to process record at row ${currentRowNumber}:`, record, 'Error:', errorMessage);
           }
         }
         
@@ -197,7 +203,10 @@ export class LegalAffairsCSVImporter {
 
         const { data, error } = await supabase
           .from('government_cases')
-          .insert(normalizedRecords)
+          .upsert(normalizedRecords, {
+            onConflict: 'ag_file_reference',
+            ignoreDuplicates: false
+          })
           .select('id');
 
         if (error) {
@@ -258,18 +267,24 @@ export class LegalAffairsCSVImporter {
         'ag file reference': 'ag_file_reference',
         'court station': 'court_station',
         'court rank': 'court_rank',
+        'court': 'court_rank',
         'case no': 'case_no',
         'case': 'case_year',
         'case year': 'case_year',
         'case parties': 'case_parties',
         'nature of the claim new': 'nature_of_claim_new',
         'nature of claim (new)': 'nature_of_claim_new',
+        'nature of claim new': 'nature_of_claim_new',
         'nature of the claim old': 'nature_of_claim_old',
         'potential liability (kshs)': 'potential_liability_kshs',
         'potential liability (ksh)': 'potential_liability_kshs',
+        'potential liability': 'potential_liability_kshs',
         'current case status': 'current_case_status',
         'counsel dealing': 'counsel_dealing',
-        '': 'index_field' // Handle empty column headers
+        'ministry': 'ministry',
+        'region': 'region',
+        'remarks': 'remarks',
+        '': `empty_column_${Math.random().toString(36).substr(2, 5)}` // Handle empty headers uniquely
       };
       
       return mappings[clean] || clean.replace(/[^a-z0-9]/g, '_');
@@ -280,14 +295,28 @@ export class LegalAffairsCSVImporter {
    * Normalize a single record to the standard format
    */
   private normalizeRecord(record: any, fileName: string, batchId: string): LegalAffairsCaseRecord {
-    // Extract and validate required fields
+    // Extract fields with fallbacks - allow empty values for flexible imports
     const agFileRef = record.ag_file_reference || record.ag_ref || '';
     const courtStation = record.court_station || '';
     const caseParties = record.case_parties || '';
     const caseStatus = record.current_case_status || '';
 
-    if (!agFileRef || !courtStation || !caseParties || !caseStatus) {
-      throw new Error(`Missing required fields: AG File Reference, Court Station, Case Parties, or Case Status`);
+    // Generate AG File Reference if missing, using available data
+    let finalAgFileRef = agFileRef;
+    if (!finalAgFileRef || finalAgFileRef.trim() === '') {
+      // Try to construct from other available fields
+      const caseNo = record.case_no || '';
+      const year = record.case_year || '';
+      const station = courtStation || '';
+      
+      if (caseNo && year) {
+        finalAgFileRef = `${station}/${caseNo}/${year}`;
+      } else if (caseNo) {
+        finalAgFileRef = `${station}/${caseNo}`;
+      } else {
+        // Last resort: generate a unique identifier
+        finalAgFileRef = `IMPORT_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      }
     }
 
     // Get liability amount as string (existing table uses text field)
@@ -304,21 +333,21 @@ export class LegalAffairsCSVImporter {
     }
 
     return {
-      ag_file_reference: agFileRef,
-      serial_no: record.serial_no,
-      court_station: courtStation,
-      court_rank: record.court_rank,
-      case_no: record.case_no,
-      case_year: caseYear,
-      case_parties: caseParties,
-      nature_of_claim_new: record.nature_of_claim_new,
-      nature_of_claim_old: record.nature_of_claim_old,
-      potential_liability_kshs: liabilityRaw || undefined,
-      current_case_status: caseStatus,
-      remarks: record.remarks,
-      ministry: record.ministry,
-      counsel_dealing: record.counsel_dealing,
-      region: record.region,
+      ag_file_reference: finalAgFileRef.trim(),
+      serial_no: record.serial_no || null,
+      court_station: courtStation.trim() || null,
+      court_rank: record.court_rank || null,
+      case_no: record.case_no || null,
+      case_year: caseYear || null,
+      case_parties: caseParties.trim() || null,
+      nature_of_claim_new: record.nature_of_claim_new || null,
+      nature_of_claim_old: record.nature_of_claim_old || null,
+      potential_liability_kshs: liabilityRaw || null,
+      current_case_status: caseStatus.trim() || null,
+      remarks: record.remarks || null,
+      ministry: record.ministry || null,
+      counsel_dealing: record.counsel_dealing || null,
+      region: record.region || null,
       created_by: this.userId
     };
   }
