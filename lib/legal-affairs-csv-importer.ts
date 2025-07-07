@@ -9,25 +9,23 @@ import { supabase } from './supabase';
 export interface LegalAffairsCaseRecord {
   // Core identifiers
   ag_file_reference: string;
-  serial_number?: string;
+  serial_no?: string;
   
   // Court information
   court_station: string;
   court_rank?: string;
-  court?: string;
   
   // Case details
-  case_number?: string;
+  case_no?: string;
   case_year?: number;
   case_parties: string;
   
-  // Nature of claim
-  nature_of_claim?: string;
+  // Nature of claim (using existing table structure)
+  nature_of_claim_new?: string;
   nature_of_claim_old?: string;
   
-  // Financial information
-  potential_liability?: number;
-  potential_liability_raw?: string;
+  // Financial information (using existing field)
+  potential_liability_kshs?: string;
   
   // Status and progress
   current_case_status: string;
@@ -37,11 +35,9 @@ export interface LegalAffairsCaseRecord {
   ministry?: string;
   counsel_dealing?: string;
   region?: string;
-  sheet_name?: string;
   
   // Metadata
-  file_source: string;
-  import_batch_id: string;
+  created_by: string;
 }
 
 export interface ImportResult {
@@ -200,7 +196,7 @@ export class LegalAffairsCSVImporter {
         });
 
         const { data, error } = await supabase
-          .from('legal_affairs_cases')
+          .from('government_cases')
           .insert(normalizedRecords)
           .select('id');
 
@@ -256,21 +252,21 @@ export class LegalAffairsCSVImporter {
       
       // Map common variations to standard field names
       const mappings: { [key: string]: string } = {
-        'serial no.': 'serial_number',
-        'serial no': 'serial_number',
+        'serial no.': 'serial_no',
+        'serial no': 'serial_no',
         'sheet name': 'sheet_name',
         'ag file reference': 'ag_file_reference',
         'court station': 'court_station',
         'court rank': 'court_rank',
-        'case no': 'case_number',
+        'case no': 'case_no',
         'case': 'case_year',
         'case year': 'case_year',
         'case parties': 'case_parties',
-        'nature of the claim new': 'nature_of_claim',
-        'nature of claim (new)': 'nature_of_claim',
+        'nature of the claim new': 'nature_of_claim_new',
+        'nature of claim (new)': 'nature_of_claim_new',
         'nature of the claim old': 'nature_of_claim_old',
-        'potential liability (kshs)': 'potential_liability_raw',
-        'potential liability (ksh)': 'potential_liability_raw',
+        'potential liability (kshs)': 'potential_liability_kshs',
+        'potential liability (ksh)': 'potential_liability_kshs',
         'current case status': 'current_case_status',
         'counsel dealing': 'counsel_dealing',
         '': 'index_field' // Handle empty column headers
@@ -294,18 +290,8 @@ export class LegalAffairsCSVImporter {
       throw new Error(`Missing required fields: AG File Reference, Court Station, Case Parties, or Case Status`);
     }
 
-    // Parse liability amount
-    const liabilityRaw = record.potential_liability_raw || '';
-    let liability: number | undefined;
-    
-    if (liabilityRaw) {
-      // Remove commas, currency symbols, and extract numeric value
-      const numericValue = liabilityRaw.replace(/[^0-9.]/g, '');
-      const parsed = parseFloat(numericValue);
-      if (!isNaN(parsed) && parsed > 0) {
-        liability = parsed;
-      }
-    }
+    // Get liability amount as string (existing table uses text field)
+    const liabilityRaw = record.potential_liability_kshs || '';
 
     // Parse case year
     let caseYear: number | undefined;
@@ -319,25 +305,21 @@ export class LegalAffairsCSVImporter {
 
     return {
       ag_file_reference: agFileRef,
-      serial_number: record.serial_number,
+      serial_no: record.serial_no,
       court_station: courtStation,
       court_rank: record.court_rank,
-      court: record.court,
-      case_number: record.case_number,
+      case_no: record.case_no,
       case_year: caseYear,
       case_parties: caseParties,
-      nature_of_claim: record.nature_of_claim,
+      nature_of_claim_new: record.nature_of_claim_new,
       nature_of_claim_old: record.nature_of_claim_old,
-      potential_liability: liability,
-      potential_liability_raw: liabilityRaw || undefined,
+      potential_liability_kshs: liabilityRaw || undefined,
       current_case_status: caseStatus,
       remarks: record.remarks,
       ministry: record.ministry,
       counsel_dealing: record.counsel_dealing,
       region: record.region,
-      sheet_name: record.sheet_name,
-      file_source: fileName,
-      import_batch_id: batchId
+      created_by: this.userId
     };
   }
 
@@ -371,7 +353,7 @@ export class LegalAffairsCSVImporter {
    */
   private async checkForDuplicate(agFileReference: string): Promise<boolean> {
     const { data, error } = await supabase
-      .from('legal_affairs_cases')
+      .from('government_cases')
       .select('id')
       .eq('ag_file_reference', agFileReference)
       .limit(1);
@@ -385,29 +367,15 @@ export class LegalAffairsCSVImporter {
   }
 
   /**
-   * Create import batch record
+   * Create import batch record (simplified - no tracking table)
    */
   private async createImportBatch(fileName: string, totalRecords: number): Promise<string> {
-    const { data, error } = await supabase
-      .from('legal_affairs_import_batches')
-      .insert({
-        file_name: fileName,
-        total_records: totalRecords,
-        created_by: this.userId,
-        started_at: new Date().toISOString()
-      })
-      .select('id')
-      .single();
-
-    if (error) {
-      throw new Error(`Failed to create import batch: ${error.message}`);
-    }
-
-    return data.id;
+    // Generate a simple batch ID since we don't have import tracking table
+    return `batch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
   /**
-   * Update import batch status
+   * Update import batch status (simplified - no tracking table)
    */
   private async updateBatchStatus(
     batchId: string, 
@@ -415,25 +383,7 @@ export class LegalAffairsCSVImporter {
     errorMessage?: string,
     stats?: { imported: number; skipped: number; errors: number }
   ): Promise<void> {
-    const updateData: any = { status };
-    
-    if (status === 'completed') {
-      updateData.completed_at = new Date().toISOString();
-    }
-    
-    if (errorMessage) {
-      updateData.error_message = errorMessage;
-    }
-    
-    if (stats) {
-      updateData.imported_records = stats.imported;
-      updateData.skipped_records = stats.skipped;
-      updateData.error_records = stats.errors;
-    }
-
-    await supabase
-      .from('legal_affairs_import_batches')
-      .update(updateData)
-      .eq('id', batchId);
+    // Log batch status for debugging (since we don't have import tracking table)
+    console.log(`Batch ${batchId} status: ${status}`, { errorMessage, stats });
   }
 }

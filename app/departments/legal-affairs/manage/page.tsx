@@ -54,11 +54,12 @@ interface LegalCase {
   ag_file_reference: string;
   court_station: string;
   case_parties: string;
-  nature_of_claim: string;
-  potential_liability: number;
+  nature_of_claim_new: string;
+  nature_of_claim_old: string;
+  potential_liability_kshs: string;
   current_case_status: string;
   remarks: string;
-  case_number: string;
+  case_no: string;
   case_year: number;
   court_rank: string;
   ministry: string;
@@ -123,13 +124,13 @@ export default function LegalAffairsManagePage() {
       setIsLoading(true);
       
       let query = supabase
-        .from('legal_affairs_cases')
+        .from('government_cases')
         .select('*', { count: 'exact' })
         .order('created_at', { ascending: false });
 
       // Apply filters
       if (searchTerm) {
-        query = query.or(`ag_file_reference.ilike.%${searchTerm}%,case_parties.ilike.%${searchTerm}%,nature_of_claim.ilike.%${searchTerm}%`);
+        query = query.or(`ag_file_reference.ilike.%${searchTerm}%,case_parties.ilike.%${searchTerm}%,nature_of_claim_new.ilike.%${searchTerm}%`);
       }
       
       if (statusFilter !== 'all') {
@@ -173,29 +174,29 @@ export default function LegalAffairsManagePage() {
     try {
       // Load unique court stations
       const { data: courts } = await supabase
-        .from('legal_affairs_cases')
+        .from('government_cases')
         .select('court_station')
         .not('court_station', 'is', null);
       
-      const uniqueCourts = [...new Set(courts?.map(c => c.court_station) || [])].sort();
+      const uniqueCourts = Array.from(new Set(courts?.map(c => c.court_station) || [])).sort();
       setCourtStations(uniqueCourts);
 
       // Load unique case statuses
       const { data: statuses } = await supabase
-        .from('legal_affairs_cases')
+        .from('government_cases')
         .select('current_case_status')
         .not('current_case_status', 'is', null);
       
-      const uniqueStatuses = [...new Set(statuses?.map(s => s.current_case_status) || [])].sort();
+      const uniqueStatuses = Array.from(new Set(statuses?.map(s => s.current_case_status) || [])).sort();
       setCaseStatuses(uniqueStatuses);
 
       // Load unique years
       const { data: years } = await supabase
-        .from('legal_affairs_cases')
+        .from('government_cases')
         .select('case_year')
         .not('case_year', 'is', null);
       
-      const uniqueYears = [...new Set(years?.map(y => y.case_year) || [])].sort((a, b) => b - a);
+      const uniqueYears = Array.from(new Set(years?.map(y => y.case_year) || [])).sort((a, b) => b - a);
       setCaseYears(uniqueYears);
 
     } catch (error) {
@@ -241,12 +242,12 @@ export default function LegalAffairsManagePage() {
 
       // Get all cases matching current filters (without pagination)
       let query = supabase
-        .from('legal_affairs_cases')
+        .from('government_cases')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (searchTerm) {
-        query = query.or(`ag_file_reference.ilike.%${searchTerm}%,case_parties.ilike.%${searchTerm}%,nature_of_claim.ilike.%${searchTerm}%`);
+        query = query.or(`ag_file_reference.ilike.%${searchTerm}%,case_parties.ilike.%${searchTerm}%,nature_of_claim_new.ilike.%${searchTerm}%`);
       }
       
       if (statusFilter !== 'all') {
@@ -286,11 +287,11 @@ export default function LegalAffairsManagePage() {
           `"${case_.ag_file_reference || ''}"`,
           `"${case_.court_station || ''}"`,
           `"${case_.case_parties || ''}"`,
-          `"${case_.nature_of_claim || ''}"`,
-          case_.potential_liability || 0,
+          `"${case_.nature_of_claim_new || case_.nature_of_claim_old || ''}"`,
+          parseFloat(case_.potential_liability_kshs?.replace(/[^0-9.]/g, '') || '0'),
           `"${case_.current_case_status || ''}"`,
           `"${case_.remarks || ''}"`,
-          `"${case_.case_number || ''}"`,
+          `"${case_.case_no || ''}"`,
           case_.case_year || '',
           `"${case_.court_rank || ''}"`,
           case_.data_quality_score || 0,
@@ -558,12 +559,12 @@ export default function LegalAffairsManagePage() {
                                 </div>
                               </TableCell>
                               <TableCell className="max-w-xs">
-                                <div className="truncate" title={case_.nature_of_claim}>
-                                  {case_.nature_of_claim || '-'}
+                                <div className="truncate" title={case_.nature_of_claim_new || case_.nature_of_claim_old}>
+                                  {case_.nature_of_claim_new || case_.nature_of_claim_old || '-'}
                                 </div>
                               </TableCell>
                               <TableCell className="text-right">
-                                {formatCurrency(case_.potential_liability)}
+                                {formatCurrency(parseFloat(case_.potential_liability_kshs?.replace(/[^0-9.]/g, '') || '0'))}
                               </TableCell>
                               <TableCell>
                                 <Badge className={getStatusColor(case_.current_case_status)}>
@@ -671,7 +672,7 @@ export default function LegalAffairsManagePage() {
                     </div>
                     <div>
                       <span className="text-sm text-gray-500">Case Number:</span>
-                      <div>{selectedCase.case_number || '-'}</div>
+                      <div>{selectedCase.case_no || '-'}</div>
                     </div>
                     <div>
                       <span className="text-sm text-gray-500">Case Year:</span>
@@ -716,7 +717,7 @@ export default function LegalAffairsManagePage() {
                   </div>
                   <div>
                     <span className="text-sm text-gray-500">Nature of Claim:</span>
-                    <div className="mt-1 p-3 bg-gray-50 rounded">{selectedCase.nature_of_claim || '-'}</div>
+                    <div className="mt-1 p-3 bg-gray-50 rounded">{selectedCase.nature_of_claim_new || selectedCase.nature_of_claim_old || '-'}</div>
                   </div>
                   <div>
                     <span className="text-sm text-gray-500">Current Status:</span>
@@ -728,7 +729,7 @@ export default function LegalAffairsManagePage() {
                   </div>
                   <div>
                     <span className="text-sm text-gray-500">Potential Liability:</span>
-                    <div className="text-lg font-medium">{formatCurrency(selectedCase.potential_liability)}</div>
+                    <div className="text-lg font-medium">{formatCurrency(parseFloat(selectedCase.potential_liability_kshs?.replace(/[^0-9.]/g, '') || '0'))}</div>
                   </div>
                   <div>
                     <span className="text-sm text-gray-500">Remarks:</span>

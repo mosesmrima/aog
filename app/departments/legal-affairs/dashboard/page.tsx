@@ -20,7 +20,10 @@ export default function LegalAffairsDashboardPage() {
     concludedCases: 0,
     totalLiability: 0,
     thisMonth: 0,
-    avgProcessingTime: '12-18 months'
+    avgProcessingTime: '12-18 months',
+    courtStations: [],
+    casesByNature: [],
+    importedFilesCount: 0
   });
   
   const topLandCases = getTopLandCaseCategories(5);
@@ -80,13 +83,54 @@ export default function LegalAffairsDashboardPage() {
         return sum;
       }, 0);
 
+      // Analyze court stations
+      const stationCounts = {};
+      casesData.forEach(case_ => {
+        if (case_.court_station) {
+          const station = case_.court_station.trim().toUpperCase();
+          stationCounts[station] = (stationCounts[station] || 0) + 1;
+        }
+      });
+      
+      const courtStations = Object.entries(stationCounts)
+        .map(([station, count]) => ({
+          station,
+          count,
+          percentage: ((count / totalCases) * 100).toFixed(1)
+        }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+
+      // Analyze cases by nature
+      const natureCounts = {};
+      casesData.forEach(case_ => {
+        if (case_.nature_of_claim_new) {
+          const nature = case_.nature_of_claim_new.trim();
+          if (nature) {
+            natureCounts[nature] = (natureCounts[nature] || 0) + 1;
+          }
+        }
+      });
+      
+      const casesByNature = Object.entries(natureCounts)
+        .map(([nature, count]) => ({
+          nature,
+          count,
+          percentage: ((count / totalCases) * 100).toFixed(1)
+        }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+
       setStats({
         totalCases,
         activeCases,
         concludedCases,
         totalLiability,
         thisMonth,
-        avgProcessingTime: '12-18 months'
+        avgProcessingTime: '12-18 months',
+        courtStations,
+        casesByNature,
+        importedFilesCount: 11 // From the 11 CSV files in the analysis
       });
     } catch (error) {
       console.error('Error loading stats:', error);
@@ -219,7 +263,7 @@ export default function LegalAffairsDashboardPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+            className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6"
           >
             <Card>
               <CardHeader>
@@ -314,45 +358,69 @@ export default function LegalAffairsDashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Mombasa</span>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-24 bg-gray-200 rounded-full h-2">
-                        <div className="bg-blue-500 h-2 rounded-full" style={{ width: '45%' }}></div>
+                  {stats.courtStations.length > 0 ? (
+                    stats.courtStations.map((station, index) => (
+                      <div key={station.station} className="flex items-center justify-between">
+                        <span className="text-sm font-medium">{station.station}</span>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-24 bg-gray-200 rounded-full h-2">
+                            <div 
+                              className={`h-2 rounded-full ${
+                                index === 0 ? 'bg-blue-500' : 
+                                index === 1 ? 'bg-green-500' : 
+                                index === 2 ? 'bg-purple-500' : 
+                                index === 3 ? 'bg-orange-500' : 'bg-gray-500'
+                              }`}
+                              style={{ width: `${station.percentage}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-sm text-gray-600">{station.count} ({station.percentage}%)</span>
+                        </div>
                       </div>
-                      <span className="text-sm text-gray-600">45%</span>
+                    ))
+                  ) : (
+                    <div className="text-center text-gray-500 py-4">
+                      {isLoadingStats ? 'Loading court station data...' : 'No court station data available'}
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Kwale</span>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-24 bg-gray-200 rounded-full h-2">
-                        <div className="bg-green-500 h-2 rounded-full" style={{ width: '25%' }}></div>
-                      </div>
-                      <span className="text-sm text-gray-600">25%</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Taveta</span>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-24 bg-gray-200 rounded-full h-2">
-                        <div className="bg-purple-500 h-2 rounded-full" style={{ width: '15%' }}></div>
-                      </div>
-                      <span className="text-sm text-gray-600">15%</span>
-                    </div>
-                  </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Other</span>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-24 bg-gray-200 rounded-full h-2">
-                        <div className="bg-orange-500 h-2 rounded-full" style={{ width: '15%' }}></div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Case Types by Nature</CardTitle>
+                <CardDescription>Most common types of legal cases</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {stats.casesByNature.length > 0 ? (
+                    stats.casesByNature.map((type, index) => (
+                      <div key={type.nature} className="flex items-center justify-between">
+                        <span className="text-sm font-medium truncate max-w-[120px]" title={type.nature}>
+                          {type.nature.length > 20 ? `${type.nature.substring(0, 20)}...` : type.nature}
+                        </span>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-20 bg-gray-200 rounded-full h-2">
+                            <div 
+                              className={`h-2 rounded-full ${
+                                index === 0 ? 'bg-indigo-500' : 
+                                index === 1 ? 'bg-pink-500' : 
+                                index === 2 ? 'bg-yellow-500' : 
+                                index === 3 ? 'bg-red-500' : 'bg-gray-400'
+                              }`}
+                              style={{ width: `${Math.min(type.percentage * 2, 100)}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-sm text-gray-600">{type.count}</span>
+                        </div>
                       </div>
-                      <span className="text-sm text-gray-600">15%</span>
+                    ))
+                  ) : (
+                    <div className="text-center text-gray-500 py-4">
+                      {isLoadingStats ? 'Loading case types...' : 'No case type data available'}
                     </div>
-                  </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -367,30 +435,36 @@ export default function LegalAffairsDashboardPage() {
                   <div>
                     <div className="flex justify-between text-sm mb-1">
                       <span>Case Resolution Rate</span>
-                      <span>78.5%</span>
+                      <span>{stats.totalCases > 0 ? ((stats.concludedCases / stats.totalCases) * 100).toFixed(1) : '0'}%</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-green-500 h-2 rounded-full" style={{ width: '78.5%' }}></div>
+                      <div className="bg-green-500 h-2 rounded-full" style={{ 
+                        width: `${stats.totalCases > 0 ? (stats.concludedCases / stats.totalCases) * 100 : 0}%` 
+                      }}></div>
                     </div>
                   </div>
                   
                   <div>
                     <div className="flex justify-between text-sm mb-1">
-                      <span>Data Quality Score</span>
-                      <span>92.3%</span>
+                      <span>Data Import Success</span>
+                      <span>{stats.importedFilesCount}/11 files</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-blue-500 h-2 rounded-full" style={{ width: '92.3%' }}></div>
+                      <div className="bg-blue-500 h-2 rounded-full" style={{ 
+                        width: `${(stats.importedFilesCount / 11) * 100}%` 
+                      }}></div>
                     </div>
                   </div>
                   
                   <div>
                     <div className="flex justify-between text-sm mb-1">
-                      <span>Compliance Score</span>
-                      <span>96.7%</span>
+                      <span>Active Case Load</span>
+                      <span>{stats.totalCases > 0 ? ((stats.activeCases / stats.totalCases) * 100).toFixed(1) : '0'}%</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-purple-500 h-2 rounded-full" style={{ width: '96.7%' }}></div>
+                      <div className="bg-yellow-500 h-2 rounded-full" style={{ 
+                        width: `${stats.totalCases > 0 ? (stats.activeCases / stats.totalCases) * 100 : 0}%` 
+                      }}></div>
                     </div>
                   </div>
 
