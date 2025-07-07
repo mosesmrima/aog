@@ -35,6 +35,27 @@ const nextConfig = {
         destination: '/departments/administration/dashboard',
         permanent: true,
       },
+      // Department main page redirects
+      {
+        source: '/departments/societies',
+        destination: '/departments/societies/dashboard',
+        permanent: true,
+      },
+      {
+        source: '/departments/legal-affairs',
+        destination: '/departments/legal-affairs/dashboard',
+        permanent: true,
+      },
+      {
+        source: '/departments/marriages',
+        destination: '/departments/marriages/dashboard',
+        permanent: true,
+      },
+      {
+        source: '/departments/administration',
+        destination: '/departments/administration/dashboard',
+        permanent: true,
+      },
     ];
   },
 };
