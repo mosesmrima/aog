@@ -54,6 +54,11 @@ export interface SocietyRecord {
   comments?: string;
   data_source?: string;
   
+  // Data quality and tracking fields
+  data_quality_score?: number;
+  missing_fields?: string[];
+  import_warnings?: string[];
+  
   // Audit fields
   created_by: string;
 }
@@ -260,7 +265,7 @@ export class SocietiesCSVImporter {
           .select('id');
 
         if (error) {
-          // If batch upsert fails, try individual inserts as fallback
+          // If batch upsert fails, try individual inserts as fallback with enhanced error handling
           console.warn('Batch upsert failed for societies, attempting individual inserts:', error.message);
           
           let individualSuccess = 0;
@@ -268,21 +273,70 @@ export class SocietiesCSVImporter {
           
           for (const record of deduplicatedRecords) {
             try {
+              // Try to clean the record before inserting
+              const cleanRecord = { ...record };
+              
+              // Ensure import_warnings is properly formatted as JSONB
+              if (cleanRecord.import_warnings && Array.isArray(cleanRecord.import_warnings)) {
+                // Convert array to JSON string for database storage
+                cleanRecord.import_warnings = cleanRecord.import_warnings as any;
+              }
+              
+              // Ensure missing_fields is properly formatted as array
+              if (cleanRecord.missing_fields && !Array.isArray(cleanRecord.missing_fields)) {
+                cleanRecord.missing_fields = [];
+              }
+              
               const { error: individualError } = await supabase
                 .from('societies')
-                .upsert([record], {
+                .upsert([cleanRecord], {
                   onConflict: 'registration_number',
                   ignoreDuplicates: false
                 });
               
               if (individualError) {
-                result.errors.push(`Record ${record.registration_number || record.society_name}: ${individualError.message}`);
+                // Log detailed error for debugging
+                console.warn(`Individual record insert failed:`, {
+                  record: cleanRecord,
+                  error: individualError
+                });
+                
+                // Try to identify specific error types
+                let errorMessage = individualError.message;
+                if (errorMessage.includes('date/time field value out of range')) {
+                  errorMessage = `Date validation error - invalid date format in record`;
+                  // Try to insert without dates
+                  const recordWithoutDates = { ...cleanRecord };
+                  recordWithoutDates.registration_date = null;
+                  recordWithoutDates.exemption_date = null;
+                  
+                  const { error: retryError } = await supabase
+                    .from('societies')
+                    .upsert([recordWithoutDates], {
+                      onConflict: 'registration_number',
+                      ignoreDuplicates: false
+                    });
+                  
+                  if (!retryError) {
+                    individualSuccess++;
+                    result.warnings = result.warnings || [];
+                    result.warnings.push(`Record ${cleanRecord.registration_number || cleanRecord.society_name}: Saved without dates due to date format issues`);
+                    continue;
+                  }
+                }
+                
+                result.errors.push(`Record ${cleanRecord.registration_number || cleanRecord.society_name}: ${errorMessage}`);
                 individualFailures++;
               } else {
                 individualSuccess++;
               }
             } catch (err) {
-              result.errors.push(`Record ${record.registration_number || record.society_name}: ${err instanceof Error ? err.message : 'Unknown error'}`);
+              const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+              console.warn(`Individual record processing failed:`, {
+                record: record.registration_number || record.society_name,
+                error: errorMessage
+              });
+              result.errors.push(`Record ${record.registration_number || record.society_name}: ${errorMessage}`);
               individualFailures++;
             }
           }
@@ -290,7 +344,9 @@ export class SocietiesCSVImporter {
           if (individualSuccess > 0) {
             result.imported = individualSuccess;
             result.success = true;
-            result.errors.push(`Batch insert failed, individual fallback: ${individualSuccess} successful, ${individualFailures} failed`);
+            const message = `Batch insert failed, individual fallback: ${individualSuccess} successful, ${individualFailures} failed`;
+            result.warnings = result.warnings || [];
+            result.warnings.push(message);
           } else {
             result.errors.push(`Database error: ${error.message}`);
             await this.updateBatchStatus(batchId, 'failed', error.message);
@@ -418,34 +474,131 @@ export class SocietiesCSVImporter {
       }
     }
 
-    // Parse dates safely
+    // Parse dates safely with comprehensive validation
     const parseDate = (dateStr: string | undefined): string | undefined => {
       if (!dateStr || typeof dateStr !== 'string') return undefined;
       
       try {
-        // Handle various date formats
         const cleanDate = dateStr.trim();
+        if (!cleanDate || cleanDate.toLowerCase() === 'null') return undefined;
+        
+        // Handle DD/MM/YYYY or MM/DD/YYYY format
         if (cleanDate.match(/^\d{1,2}\/\d{1,2}\/\d{2,4}$/)) {
-          // Handle DD/MM/YYYY or MM/DD/YYYY format
           const parts = cleanDate.split('/');
-          const day = parseInt(parts[0]);
-          const month = parseInt(parts[1]);
-          const year = parseInt(parts[2]);
+          let day = parseInt(parts[0]);
+          let month = parseInt(parts[1]);
+          let year = parseInt(parts[2]);
           
           // Convert 2-digit years to 4-digit
-          const fullYear = year < 100 ? (year > 50 ? 1900 + year : 2000 + year) : year;
+          if (year < 100) {
+            year = year > 50 ? 1900 + year : 2000 + year;
+          }
           
-          // Create ISO date string (assuming DD/MM/YYYY format for registrations)
-          return `${fullYear}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-        } else if (cleanDate.match(/^\d{4}-\d{2}-\d{2}/)) {
-          // Already in ISO format
-          return cleanDate.substr(0, 10);
+          // Validate date components
+          if (month < 1 || month > 12) {
+            console.warn(`Invalid month in date: ${dateStr} (month=${month})`);
+            return undefined;
+          }
+          
+          if (day < 1 || day > 31) {
+            console.warn(`Invalid day in date: ${dateStr} (day=${day})`);
+            return undefined;
+          }
+          
+          // Additional validation for days in specific months
+          const daysInMonth = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+          if (day > daysInMonth[month - 1]) {
+            console.warn(`Invalid day for month in date: ${dateStr} (day=${day}, month=${month})`);
+            return undefined;
+          }
+          
+          // Special validation for February in non-leap years
+          if (month === 2 && day === 29) {
+            const isLeapYear = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+            if (!isLeapYear) {
+              console.warn(`Invalid leap day in non-leap year: ${dateStr}`);
+              return undefined;
+            }
+          }
+          
+          // Validate year range (reasonable bounds for society registrations)
+          if (year < 1800 || year > new Date().getFullYear() + 1) {
+            console.warn(`Year out of reasonable range: ${dateStr} (year=${year})`);
+            return undefined;
+          }
+          
+          // Create and validate ISO date string (assuming DD/MM/YYYY format)
+          const isoDate = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+          
+          // Final validation by creating a Date object
+          const testDate = new Date(isoDate);
+          if (testDate.getFullYear() !== year || testDate.getMonth() + 1 !== month || testDate.getDate() !== day) {
+            console.warn(`Date validation failed: ${dateStr} -> ${isoDate}`);
+            return undefined;
+          }
+          
+          return isoDate;
+        } 
+        
+        // Handle ISO format (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)
+        else if (cleanDate.match(/^\d{4}-\d{2}-\d{2}/)) {
+          const datePart = cleanDate.substr(0, 10);
+          const parts = datePart.split('-');
+          const year = parseInt(parts[0]);
+          const month = parseInt(parts[1]);
+          const day = parseInt(parts[2]);
+          
+          // Validate components
+          if (month < 1 || month > 12 || day < 1 || day > 31) {
+            console.warn(`Invalid date components in ISO format: ${dateStr}`);
+            return undefined;
+          }
+          
+          // Validate by creating Date object
+          const testDate = new Date(datePart);
+          if (testDate.getFullYear() !== year || testDate.getMonth() + 1 !== month || testDate.getDate() !== day) {
+            console.warn(`ISO date validation failed: ${dateStr}`);
+            return undefined;
+          }
+          
+          return datePart;
         }
+        
+        // Handle DD-MM-YYYY format
+        else if (cleanDate.match(/^\d{1,2}-\d{1,2}-\d{2,4}$/)) {
+          const parts = cleanDate.split('-');
+          const day = parseInt(parts[0]);
+          const month = parseInt(parts[1]);
+          let year = parseInt(parts[2]);
+          
+          if (year < 100) {
+            year = year > 50 ? 1900 + year : 2000 + year;
+          }
+          
+          // Same validation as DD/MM/YYYY
+          if (month < 1 || month > 12 || day < 1 || day > 31) {
+            console.warn(`Invalid date components: ${dateStr}`);
+            return undefined;
+          }
+          
+          const isoDate = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+          const testDate = new Date(isoDate);
+          if (testDate.getFullYear() !== year || testDate.getMonth() + 1 !== month || testDate.getDate() !== day) {
+            console.warn(`Date validation failed: ${dateStr} -> ${isoDate}`);
+            return undefined;
+          }
+          
+          return isoDate;
+        }
+        
+        // If no format matches, log and return undefined
+        console.warn(`Unrecognized date format: ${dateStr}`);
+        return undefined;
+        
       } catch (err) {
-        console.warn(`Failed to parse date: ${dateStr}`, err);
+        console.warn(`Date parsing error for '${dateStr}':`, err);
+        return undefined;
       }
-      
-      return undefined;
     };
 
     // Parse member count safely
@@ -455,10 +608,66 @@ export class SocietiesCSVImporter {
       return isNaN(parsed) ? undefined : parsed;
     };
 
+    // Track import warnings for data quality
+    const importWarnings: string[] = [];
+    
+    // Try to parse dates and track failures
+    const registrationDateStr = record.registration_date || record.reg_date || record.date;
+    const exemptionDateStr = record.exemption_date;
+    
+    const registrationDate = parseDate(registrationDateStr);
+    const exemptionDate = parseDate(exemptionDateStr);
+    
+    // Track date parsing issues
+    if (registrationDateStr && !registrationDate) {
+      importWarnings.push(`Invalid registration date: ${registrationDateStr}`);
+    }
+    if (exemptionDateStr && !exemptionDate) {
+      importWarnings.push(`Invalid exemption date: ${exemptionDateStr}`);
+    }
+    
+    // Track missing critical fields
+    if (!societyName || societyName.trim() === '') {
+      importWarnings.push('Society name is missing');
+    }
+    
+    // Calculate data quality score (similar to legal affairs system)
+    const totalFields = 19; // Total possible fields
+    let filledFields = 0;
+    
+    const fieldsToCheck = [
+      finalRegistrationNumber, societyName, registrationDate, record.file_number || record.file_no,
+      record.registry_office || record.reg_office, record.address, record.nature_of_society || record.nature,
+      record.member_class, record.member_count || record.member_no, record.chairman_name || record.chairman,
+      record.secretary_name || record.secretary, record.treasurer_name || record.treasury || record.identification,
+      record.exemption_number || record.exp_no, exemptionDate, record.application_number || record.app_number,
+      record.service_type || record.service, record.submitted_by, record.registration_status || record.stage || record.status,
+      record.comments
+    ];
+    
+    fieldsToCheck.forEach(field => {
+      if (field && field.toString().trim() !== '') {
+        filledFields++;
+      }
+    });
+    
+    const dataQualityScore = Math.round((filledFields / totalFields) * 100);
+    
+    // Identify missing fields for tracking
+    const missingFields: string[] = [];
+    if (!registrationDate) missingFields.push('registration_date');
+    if (!societyName) missingFields.push('society_name');
+    if (!record.file_number && !record.file_no) missingFields.push('file_number');
+    if (!record.registry_office && !record.reg_office) missingFields.push('registry_office');
+    if (!record.address) missingFields.push('address');
+    if (!record.nature_of_society && !record.nature) missingFields.push('nature_of_society');
+    if (!record.chairman_name && !record.chairman) missingFields.push('chairman_name');
+    if (!record.secretary_name && !record.secretary) missingFields.push('secretary_name');
+
     return {
       registration_number: finalRegistrationNumber.trim(),
       society_name: societyName.trim() || null,
-      registration_date: parseDate(record.registration_date || record.reg_date || record.date),
+      registration_date: registrationDate,
       file_number: record.file_number || record.file_no || record.fileno || null,
       registry_office: record.registry_office || record.reg_office || null,
       address: record.address || null,
@@ -469,13 +678,16 @@ export class SocietiesCSVImporter {
       secretary_name: record.secretary_name || record.secretary || null,
       treasurer_name: record.treasurer_name || record.treasury || record.identification || null,
       exemption_number: record.exemption_number || record.exp_no || null,
-      exemption_date: parseDate(record.exemption_date),
+      exemption_date: exemptionDate,
       application_number: record.application_number || record.app_number || null,
       service_type: record.service_type || record.service || null,
       submitted_by: record.submitted_by || null,
       registration_status: record.registration_status || record.stage || record.status || null,
       comments: record.comments || null,
       data_source: dataSource,
+      data_quality_score: dataQualityScore,
+      missing_fields: missingFields,
+      import_warnings: importWarnings,
       created_by: this.userId
     };
   }
