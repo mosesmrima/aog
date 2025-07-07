@@ -1,0 +1,595 @@
+{
+  "files": {
+    "AG-ELC MATTERS.xlsx - Table 3.csv": {
+      "row_count": 72,
+      "columns": [
+        "Serial No.",
+        "Sheet Name",
+        "",
+        "AG FILE REFERENCE",
+        "COURT STATION",
+        "COURT",
+        "CASE NO",
+        "CASE",
+        "CASE PARTIES",
+        "NATURE OF THE CLAIM NEW",
+        "POTENTIAL LIABILITY (KSHS)",
+        "CURRENT CASE STATUS",
+        "REMARKS"
+      ],
+      "delimiter": ",",
+      "sample_data": [
+        {
+          "Serial No.": "15116",
+          "Sheet Name": "Mary Nimwaka Salome Kiti",
+          "": "222",
+          "AG FILE REFERENCE": "CIV 135/1996",
+          "COURT STATION": "MOMBASA",
+          "COURT": "ELC",
+          "CASE NO": "414 OF 1995",
+          "CASE": "1995",
+          "CASE PARTIES": "MOHAMED BWANA MWANAADI & OTHERS",
+          "NATURE OF THE CLAIM NEW": "LAND OWNERSHIP DISPUInterests",
+          "POTENTIAL LIABILITY (KSHS)": "1,000,000",
+          "CURRENT CASE STATUS": "PENDING JUDGEMENT",
+          "REMARKS": "DEFEND"
+        },
+        {
+          "Serial No.": "15117",
+          "Sheet Name": "Mary Nimwaka Salome Kiti",
+          "": "223",
+          "AG FILE REFERENCE": "CIV 180/2012",
+          "COURT STATION": "MOMBASA",
+          "COURT": "ELC",
+          "CASE NO": "11/17/2024",
+          "CASE": "2017",
+          "CASE PARTIES": "MAT INTERNATIONAL VS A.G AND OTHERS ",
+          "NATURE OF THE CLAIM NEW": "LAND OWNERSHIP DISPUCancellation of title",
+          "POTENTIAL LIABILITY (KSHS)": "947,578",
+          "CURRENT CASE STATUS": "MATTER CONCLUDED",
+          "REMARKS": "CONCLUDED"
+        },
+        {
+          "Serial No.": "15119",
+          "Sheet Name": "Mary Nimwaka Salome Kiti",
+          "": "224",
+          "AG FILE REFERENCE": "MSA/CA /CIV 54 OF 23",
+          "COURT STATION": "MOMBASA",
+          "COURT": "COA",
+          "CASE NO": "206 OF 2023",
+          "CASE": "2023",
+          "CASE PARTIES": "HILDA WAMBUI KATUGA VS AG & OTHERS",
+          "NATURE OF THE CLAIM NEW": "LAND OWNERSHIP DISPUInterests",
+          "POTENTIAL LIABILITY (KSHS)": "500,000",
+          "CURRENT CASE STATUS": "WAITING DIRECTIONS FRDEFEND",
+          "REMARKS": "DEFEND"
+        }
+      ]
+    },
+    "AG-ELC MATTERS.xlsx - Table 7.csv": {
+      "row_count": 72,
+      "columns": [
+        "",
+        "AG FILE REFERENCE",
+        "COURT STATION",
+        "CASE PARTIES",
+        "NATURE OF THE CLAIM NEW",
+        "POTENTIAL LIABILITY (KSHS)",
+        "CURRENT CASE STATUS",
+        "REMARKS"
+      ],
+      "delimiter": ",",
+      "sample_data": [
+        {
+          "": "508",
+          "AG FILE REFERENCE": "AG/CMC /CIV 47/2021",
+          "COURT STATION": "MOMBASA",
+          "CASE PARTIES": "Discount properties vs John Joel Ria & 4 Other",
+          "NATURE OF THE CLAIM NEW": "\nCancellation of title ",
+          "POTENTIAL LIABILITY (KSHS)": "300,000",
+          "CURRENT CASE STATUS": "Matter is part heard\n  ",
+          "REMARKS": "Defend to finality"
+        },
+        {
+          "": "509",
+          "AG FILE REFERENCE": "AG/ELC.CIV 229/2021",
+          "COURT STATION": "MOMBASA",
+          "CASE PARTIES": "Isaack Kitsao Nyawa & 8 Others vs Muhia Dan",
+          "NATURE OF THE CLAIM NEW": "Cancellation of title ",
+          "POTENTIAL LIABILITY (KSHS)": "300,000",
+          "CURRENT CASE STATUS": "Matter pending compliance ",
+          "REMARKS": "Defend to finality"
+        },
+        {
+          "": "510",
+          "AG FILE REFERENCE": "AG/ ELC/ CIV 260/2021",
+          "COURT STATION": "MOMBASA",
+          "CASE PARTIES": "Juma Ali Mazera vs Patrick Mwashighadi, Land",
+          "NATURE OF THE CLAIM NEW": "Double allocation ",
+          "POTENTIAL LIABILITY (KSHS)": "300,000",
+          "CURRENT CASE STATUS": "Matter pending compliance",
+          "REMARKS": "Defend to finality"
+        }
+      ]
+    },
+    "AG-ELC MATTERS.xlsx - Table 8.csv": {
+      "row_count": 72,
+      "columns": [
+        "",
+        "AG FILE REFERENCE",
+        "COURT STATION",
+        "CASE PARTIES",
+        "NATURE OF THE CLAIM NEW",
+        "POTENTIAL LIABILITY (KSHS)",
+        "CURRENT CASE STATUS",
+        "REMARKS"
+      ],
+      "delimiter": ",",
+      "sample_data": [
+        {
+          "": "580",
+          "AG FILE REFERENCE": "CIV.95.2022",
+          "COURT STATION": "KWALE",
+          "CASE PARTIES": "CAROLA TOLKSDORF-VS- LAND REGISTRA",
+          "NATURE OF THE CLAIM NEW": "Cancellation of title",
+          "POTENTIAL LIABILITY (KSHS)": "10,000,000",
+          "CURRENT CASE STATUS": "MATTER IS SCHEDULED",
+          "REMARKS": "DEFEND"
+        },
+        {
+          "": "581",
+          "AG FILE REFERENCE": " CIV.215.2022 ",
+          "COURT STATION": "KWALE",
+          "CASE PARTIES": " TIMOTHY GIKUHE KAIGANAINE-VS- ATTOR ",
+          "NATURE OF THE CLAIM NEW": "Cancellation of title",
+          "POTENTIAL LIABILITY (KSHS)": "10,000,000",
+          "CURRENT CASE STATUS": "AWAIT SERVICE",
+          "REMARKS": "DEFEND"
+        },
+        {
+          "": "582",
+          "AG FILE REFERENCE": "CIV.32.2022",
+          "COURT STATION": " KWALE ",
+          "CASE PARTIES": "BHARAT RAMJI MANJI-VS- LAND REGISTRA ",
+          "NATURE OF THE CLAIM NEW": "Cancellation of title",
+          "POTENTIAL LIABILITY (KSHS)": "10,000,000",
+          "CURRENT CASE STATUS": "A AWAITING SERVICE ",
+          "REMARKS": "DEFEND"
+        }
+      ]
+    },
+    "AG-ELC MATTERS.xlsx - Table 5.csv": {
+      "row_count": 72,
+      "columns": [
+        "",
+        "AG FILE REFERENCE",
+        "COURT STATION",
+        "CASE PARTIES",
+        "NATURE OF THE CLAIM NEW",
+        "POTENTIAL LIABILITY (KSHS)",
+        "CURRENT CASE STATUS",
+        "REMARKS"
+      ],
+      "delimiter": ",",
+      "sample_data": [
+        {
+          "": "364",
+          "AG FILE REFERENCE": "AG/HCC/CIV101/2022  ",
+          "COURT STATION": "KWALE",
+          "CASE PARTIES": "RELIABLE ELECTRICAL VERSUS FUNZI ISL A CLAIM ARISING OUT OF ",
+          "NATURE OF THE CLAIM NEW": "Land Fraud",
+          "POTENTIAL LIABILITY (KSHS)": "11,000,000",
+          "CURRENT CASE STATUS": "MATTER SCHEDULED FOR DEFEND CLAIM",
+          "REMARKS": "   DEFEND"
+        },
+        {
+          "": "365",
+          "AG FILE REFERENCE": "AG/ELC/CIV/186/2019   ",
+          "COURT STATION": "MOMBASA",
+          "CASE PARTIES": "JON MURAGE WAIRI VERSUS THE ATTORNEY GENERAL",
+          "NATURE OF THE CLAIM NEW": "SEEKING RECTIFICATION Double allocation ",
+          "POTENTIAL LIABILITY (KSHS)": "11,000,000",
+          "CURRENT CASE STATUS": "MATTER IS SCHEDULED",
+          "REMARKS": "DEFEND"
+        },
+        {
+          "": "366",
+          "AG FILE REFERENCE": " AG/MSA/CIV/ 211/2013  ",
+          "COURT STATION": "MOMBASA",
+          "CASE PARTIES": "KESINGTON LIMITED VERSUS FLORA IMPE CLAIM ARISING OUT OF DDouble allocation",
+          "NATURE OF THE CLAIM NEW": "",
+          "POTENTIAL LIABILITY (KSHS)": "10,500,000",
+          "CURRENT CASE STATUS": "SUIT DISMISSED ON 27T ",
+          "REMARKS": " CLOSED FILE"
+        }
+      ]
+    },
+    "AG-ELC MATTERS.xlsx - Table 9.csv": {
+      "row_count": 72,
+      "columns": [
+        "",
+        "AG FILE REFERENCE",
+        "COURT STATION",
+        "CASE PARTIES",
+        "NATURE OF THE CLAIM NEW",
+        "POTENTIAL LIABILITY (KSHS)",
+        "CURRENT CASE STATUS",
+        "REMARKS"
+      ],
+      "delimiter": ",",
+      "sample_data": [
+        {
+          "": "652",
+          "AG FILE REFERENCE": "CIV.25.2021",
+          "COURT STATION": "KWALE",
+          "CASE PARTIES": "JAPHET LUGWE MWAZIZE-VS- LAND REGISREVOCATION OF TITLE    ",
+          "NATURE OF THE CLAIM NEW": "Cancellation of title",
+          "POTENTIAL LIABILITY (KSHS)": "",
+          "CURRENT CASE STATUS": "",
+          "REMARKS": ""
+        },
+        {
+          "": "653",
+          "AG FILE REFERENCE": "CIV.27.2020",
+          "COURT STATION": "MOMBASA",
+          "CASE PARTIES": "LINDA APIYO OSAWA-VS- LAND REGISTRA  PLACEMENT OF CAVEAT  ",
+          "NATURE OF THE CLAIM NEW": "Cancellation of title",
+          "POTENTIAL LIABILITY (KSHS)": "700,000",
+          "CURRENT CASE STATUS": " WE AWAIT SERVICE OF T ",
+          "REMARKS": "DEFEND"
+        },
+        {
+          "": "654",
+          "AG FILE REFERENCE": "CIV.392.2021\n",
+          "COURT STATION": "MOMBASA",
+          "CASE PARTIES": "ZAFFER EBRAHIM TAYABAN-VS- ATTORNE  REVOCATION OF TITLE   ",
+          "NATURE OF THE CLAIM NEW": " Cancellation of title",
+          "POTENTIAL LIABILITY (KSHS)": "650,000",
+          "CURRENT CASE STATUS": " AWAITING TAXATION\n",
+          "REMARKS": ""
+        }
+      ]
+    },
+    "AG-ELC MATTERS.xlsx - Table 4.csv": {
+      "row_count": 70,
+      "columns": [
+        "",
+        "AG FILE REFERENCE",
+        "COURT STATION",
+        "CASE PARTIES",
+        "NATURE OF THE CLAIM NEW",
+        "POTENTIAL LIABILITY (KSHS)",
+        "CURRENT CASE STATUS",
+        "REMARKS"
+      ],
+      "delimiter": ",",
+      "sample_data": [
+        {
+          "": "294",
+          "AG FILE REFERENCE": "Civ 236/2022",
+          "COURT STATION": "MOMBASA",
+          "CASE PARTIES": "Halima Mohamed Abu -Vs-Mohamed Omar Ath",
+          "NATURE OF THE CLAIM NEW": "Cancellation of title",
+          "POTENTIAL LIABILITY (KSHS)": "7,000,000",
+          "CURRENT CASE STATUS": "Matter pending ",
+          "REMARKS": " Defend"
+        },
+        {
+          "": "295",
+          "AG FILE REFERENCE": " Civ 287/2019",
+          "COURT STATION": "MOMBASA",
+          "CASE PARTIES": " Yatin Vinubhai - Vs- AG & others",
+          "NATURE OF THE CLAIM NEW": "Cancellation of title",
+          "POTENTIAL LIABILITY (KSHS)": "6,000,000",
+          "CURRENT CASE STATUS": " Matter concluded ",
+          "REMARKS": "Settle in costs"
+        },
+        {
+          "": "296",
+          "AG FILE REFERENCE": " Civ 14/2011",
+          "COURT STATION": "MOMBASA",
+          "CASE PARTIES": "George Nzaro Wilmott Tumbo - Vs- AG & other",
+          "NATURE OF THE CLAIM NEW": "Cancellation of title",
+          "POTENTIAL LIABILITY (KSHS)": "6,000,000",
+          "CURRENT CASE STATUS": "Matter pending hearing",
+          "REMARKS": " Defend"
+        }
+      ]
+    },
+    "AG-ELC MATTERS.xlsx - Table 2.csv": {
+      "row_count": 72,
+      "columns": [
+        "Serial No.",
+        "Sheet Name",
+        "",
+        "AG FILE REFERENCE",
+        "COURT STATION",
+        "COURT RANK",
+        "CASE NO",
+        "CASE",
+        "CASE PARTIES",
+        "NATURE OF THE CLAIM NATURE OF THE CLAIM POTENTIAL LIABILITY",
+        "NATURE OF CLAIM (NEW)",
+        "POTENTIAL LIABILITY (KSH)",
+        "CURRENT CASE STATUS",
+        "REMARKS",
+        "",
+        "",
+        ""
+      ],
+      "delimiter": ",",
+      "sample_data": [
+        {
+          "Serial No.": "8331",
+          "Sheet Name": "Martin Mwandeje",
+          "": "Mombasa",
+          "AG FILE REFERENCE": "CIV 313/2021",
+          "COURT STATION": "MOMBASA",
+          "COURT RANK": "ELC JR",
+          "CASE NO": "83 of 2010",
+          "CASE": "2010",
+          "CASE PARTIES": "Paul Kipketer Langat vs Senior Lands Registra Land claim",
+          "NATURE OF THE CLAIM NATURE OF THE CLAIM POTENTIAL LIABILITY": "",
+          "NATURE OF CLAIM (NEW)": "Certiorari",
+          "POTENTIAL LIABILITY (KSH)": "0",
+          "CURRENT CASE STATUS": "Follow up with client fo Ministry of Lands, Public Works, Housing and Ur Martin Mwandeje",
+          "REMARKS": "Ruling delivered "
+        },
+        {
+          "Serial No.": "14904",
+          "Sheet Name": "Janet Chepkorir Langat",
+          "": "",
+          "AG FILE REFERENCE": "AG/MSA/CIV 36/2012",
+          "COURT STATION": "MOMBASA",
+          "COURT RANK": "ELC",
+          "CASE NO": "10 OF 2017",
+          "CASE": "2017",
+          "CASE PARTIES": "KISAUNI BRIDGE LIMITED VS HON ATTORN Land dispute",
+          "NATURE OF THE CLAIM NATURE OF THE CLAIM POTENTIAL LIABILITY": "",
+          "NATURE OF CLAIM (NEW)": "Cancellation of title",
+          "POTENTIAL LIABILITY (KSH)": "300,000,000",
+          "CURRENT CASE STATUS": "Matter has proceeded for h ",
+          "REMARKS": "Defend"
+        },
+        {
+          "Serial No.": "14905",
+          "Sheet Name": "Janet Chepkorir Langat",
+          "": "",
+          "AG FILE REFERENCE": "AG CIV 230/2016",
+          "COURT STATION": "MOMBASA",
+          "COURT RANK": "ELC",
+          "CASE NO": "254 OF 2016",
+          "CASE": "2016",
+          "CASE PARTIES": "SBM BANK VS HON ATTORNEY GENERAL LAND CLAIM",
+          "NATURE OF THE CLAIM NATURE OF THE CLAIM POTENTIAL LIABILITY": "",
+          "NATURE OF CLAIM (NEW)": "Damages (General, Specific )",
+          "POTENTIAL LIABILITY (KSH)": "300,000,000",
+          "CURRENT CASE STATUS": "Negotiation took place",
+          "REMARKS": "settled"
+        }
+      ]
+    },
+    "AG-ELC MATTERS.xlsx - Table 10.csv": {
+      "row_count": 72,
+      "columns": [
+        "",
+        "AG FILE REFERENCE",
+        "COURT STATION",
+        "CASE PARTIES",
+        "NATURE OF THE CLAIM NEW",
+        "POTENTIAL LIABILITY (KSHS)",
+        "CURRENT CASE STATUS",
+        "REMARKS"
+      ],
+      "delimiter": ",",
+      "sample_data": [
+        {
+          "": "724",
+          "AG FILE REFERENCE": "AG/MSA/MLS/CIV 59/20",
+          "COURT STATION": "KWALE",
+          "CASE PARTIES": "ALI HAMISI ATHMAN & OTHERS -VS- ART 68",
+          "NATURE OF THE CLAIM NEW": "Damages",
+          "POTENTIAL LIABILITY (KSHS)": "20,000,000",
+          "CURRENT CASE STATUS": "PENDING HEARING OF T",
+          "REMARKS": "DEFEND"
+        },
+        {
+          "": "725",
+          "AG FILE REFERENCE": "AG/MSA/KWL/MLS/CIV",
+          "COURT STATION": "KWALE",
+          "CASE PARTIES": "PAUL GATHURU KARIUKI -VS- NASSORO JU",
+          "NATURE OF THE CLAIM NEW": "Injunction",
+          "POTENTIAL LIABILITY (KSHS)": "20,000,000",
+          "CURRENT CASE STATUS": "PENDING HEARING OF T",
+          "REMARKS": "DEFEND"
+        },
+        {
+          "": "726",
+          "AG FILE REFERENCE": "AG/MSA/KWL/MLS/CIV",
+          "COURT STATION": "KWALE",
+          "CASE PARTIES": "HALFANI RASHID MWABOYE -VS- SALIM AL",
+          "NATURE OF THE CLAIM NEW": "Injunction",
+          "POTENTIAL LIABILITY (KSHS)": "13,020,855",
+          "CURRENT CASE STATUS": "PENDING HEARING OF T",
+          "REMARKS": "DEFEND"
+        }
+      ]
+    },
+    "AG-ELC MATTERS.xlsx - Table 11.csv": {
+      "row_count": 85,
+      "columns": [
+        "",
+        "AG FILE REFERENCE",
+        "COURT STATION",
+        "CASE PARTIES",
+        "NATURE OF THE CLAIM NEW",
+        "POTENTIAL LIABILITY (KSHS)",
+        "CURRENT CASE STATUS",
+        "REMARKS"
+      ],
+      "delimiter": ",",
+      "sample_data": [
+        {
+          "": "796",
+          "AG FILE REFERENCE": "CIV 148/2024",
+          "COURT STATION": "MOMBASA",
+          "CASE PARTIES": "Salim Bakari-vs-Land Registar Kwale",
+          "NATURE OF THE CLAIM NEW": "Cancellation of title ",
+          "POTENTIAL LIABILITY (KSHS)": "300,000",
+          "CURRENT CASE STATUS": "Plaintiff never taken any st   ",
+          "REMARKS": "Defend"
+        },
+        {
+          "": "797",
+          "AG FILE REFERENCE": "CIV 35/2020",
+          "COURT STATION": "MOMBASA",
+          "CASE PARTIES": "William Mwololo-vs-Land Registar Taveta",
+          "NATURE OF THE CLAIM NEW": "Specific Performance ",
+          "POTENTIAL LIABILITY (KSHS)": "300,000",
+          "CURRENT CASE STATUS": "Mention for settlement",
+          "REMARKS": "Settlement"
+        },
+        {
+          "": "798",
+          "AG FILE REFERENCE": "CIV 154/2023",
+          "COURT STATION": "MOMBASA",
+          "CASE PARTIES": "Suzanne ODHIAMBO-vs-LR Mombasa and an",
+          "NATURE OF THE CLAIM NEW": "Cancellation of title ",
+          "POTENTIAL LIABILITY (KSHS)": "200,000",
+          "CURRENT CASE STATUS": "Matter coming up for hearing",
+          "REMARKS": "Defend"
+        }
+      ]
+    },
+    "AG-ELC MATTERS.xlsx - Table 1.csv": {
+      "row_count": 144,
+      "columns": [
+        "Serial No.",
+        "Sheet Name",
+        "",
+        "AG FILE REFERENCE",
+        "COURT STATION",
+        "COURT RANK",
+        "CASE NO",
+        "CASE YEAR",
+        "CASE PARTIES",
+        "NATURE OF THE CLAIM OLD",
+        "NATURE OF THE CLAIM NEW",
+        "POTENTIAL LIABILITY (KSHS)",
+        "CURRENT CASE STATUS",
+        "REMARKS",
+        "MINISTRY",
+        "COUNSEL DEALING",
+        "REGION"
+      ],
+      "delimiter": ",",
+      "sample_data": [
+        {
+          "Serial No.": "8182",
+          "Sheet Name": "Martin Mwandeje",
+          "": "1",
+          "AG FILE REFERENCE": "CIV 152/2020",
+          "COURT STATION": "Mombasa",
+          "COURT RANK": "ELC",
+          "CASE NO": "92 of 2020",
+          "CASE YEAR": "2020",
+          "CASE PARTIES": "Chunky Ltd and another ve Chief Land Registr",
+          "NATURE OF THE CLAIM OLD": "Land claim",
+          "NATURE OF THE CLAIM NEW": "Land Fraud",
+          "POTENTIAL LIABILITY (KSHS)": "1,200,000,000",
+          "CURRENT CASE STATUS": "Matter has a mention date",
+          "REMARKS": "Issue instructions",
+          "MINISTRY": "Ministry of Lands, Public Works, Housing and Ur",
+          "COUNSEL DEALING": "Martin Mwandeje",
+          "REGION": "Mombasa"
+        },
+        {
+          "Serial No.": "8183",
+          "Sheet Name": "Martin Mwandeje",
+          "": "2",
+          "AG FILE REFERENCE": "CIV 117/2016",
+          "COURT STATION": "Kwale",
+          "COURT RANK": "ELC",
+          "CASE NO": "94 /2016",
+          "CASE YEAR": "2016",
+          "CASE PARTIES": "Mwavumbo Group Ranch vs KRC and others",
+          "NATURE OF THE CLAIM OLD": "Land claim",
+          "NATURE OF THE CLAIM NEW": "Compulsory acquisition",
+          "POTENTIAL LIABILITY (KSHS)": "1,000,000,000",
+          "CURRENT CASE STATUS": "Matter has a hearing date",
+          "REMARKS": "Claim is against the NL",
+          "MINISTRY": "Ministry of Lands, Public Works, Housing and Ur",
+          "COUNSEL DEALING": "Martin Mwandeje",
+          "REGION": "Mombasa"
+        },
+        {
+          "Serial No.": "8184",
+          "Sheet Name": "Martin Mwandeje",
+          "": "3",
+          "AG FILE REFERENCE": "CIV 50/2012",
+          "COURT STATION": "Mombasa",
+          "COURT RANK": "ELC",
+          "CASE NO": "23 of 2012",
+          "CASE YEAR": "2012",
+          "CASE PARTIES": "Snowball Investment Ltd vs The Principal Secr",
+          "NATURE OF THE CLAIM OLD": "Land claim",
+          "NATURE OF THE CLAIM NEW": "Declaration",
+          "POTENTIAL LIABILITY (KSHS)": "165,000,000",
+          "CURRENT CASE STATUS": "Hearing of case on 21st an",
+          "REMARKS": "Fully complied",
+          "MINISTRY": "Ministry of Lands, Public Works, Housing and Ur",
+          "COUNSEL DEALING": "Martin Mwandeje",
+          "REGION": "Mombasa"
+        }
+      ]
+    },
+    "AG-ELC MATTERS.xlsx - Table 6.csv": {
+      "row_count": 72,
+      "columns": [
+        "",
+        "AG FILE REFERENCE",
+        "COURT STATION",
+        "CASE PARTIES",
+        "NATURE OF THE CLAIM NEW",
+        "POTENTIAL LIABILITY (KSHS)",
+        "CURRENT CASE STATUS",
+        "REMARKS"
+      ],
+      "delimiter": ",",
+      "sample_data": [
+        {
+          "": "436",
+          "AG FILE REFERENCE": "AG/CIV 49/1999",
+          "COURT STATION": "MOMBASA",
+          "CASE PARTIES": "RREPUBLIC VERSUS COMMISSIONER OF L",
+          "NATURE OF THE CLAIM NEW": "",
+          "POTENTIAL LIABILITY (KSHS)": "0",
+          "CURRENT CASE STATUS": "RULING DELIVERED AND",
+          "REMARKS": "CONCLUDED PENDIN"
+        },
+        {
+          "": "437",
+          "AG FILE REFERENCE": "AG/MLS/CIV 197/2016",
+          "COURT STATION": "MOMBASA",
+          "CASE PARTIES": "GILBERT MUSEMBI VERSUS MUSA MUREIT",
+          "NATURE OF THE CLAIM NEW": "",
+          "POTENTIAL LIABILITY (KSHS)": "0",
+          "CURRENT CASE STATUS": "JUDGMENT DELIVERED",
+          "REMARKS": "CLOSE FILE"
+        },
+        {
+          "": "438",
+          "AG FILE REFERENCE": "AG/CMC/CIV121/2021",
+          "COURT STATION": "MOMBASA",
+          "CASE PARTIES": "SCHOLAH ADHIAMBO OCHIENG VERSUS P",
+          "NATURE OF THE CLAIM NEW": "",
+          "POTENTIAL LIABILITY (KSHS)": "0",
+          "CURRENT CASE STATUS": "JUDGMENT DELIVERED",
+          "REMARKS": "CLOSE FILE"
+        }
+      ]
+    }
+  },
+  "unified_schema": {},
+  "data_insights": {}
+}
