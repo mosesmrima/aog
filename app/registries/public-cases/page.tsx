@@ -364,17 +364,17 @@ export default function PublicCasesRegistryPage() {
       .sort((a, b) => b.count - a.count);
   };
 
-  const getPaginatedCases = () => {
+  const getPaginatedCases = (): GovernmentCase[] => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     return filteredCases.slice(startIndex, endIndex);
   };
 
-  const getTotalPages = () => {
+  const getTotalPages = (): number => {
     return Math.ceil(filteredCases.length / itemsPerPage);
   };
 
-  const getPageNumbers = () => {
+  const getPageNumbers = (): number[] => {
     const totalPages = getTotalPages();
     const current = currentPage;
     const delta = 2;
@@ -892,50 +892,48 @@ export default function PublicCasesRegistryPage() {
                       </Card>
                     </motion.div>
                   ))}
-                </div>
-
-                {/* Pagination */}
-                {getTotalPages() > 1 && (
-                  <div className="flex items-center justify-between space-x-2 py-6 border-t">
-                    <div className="text-sm text-gray-500">
-                      Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredCases.length)} of {filteredCases.length} cases
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                        disabled={currentPage === 1}
-                      >
-                        Previous
-                      </Button>
-                      <div className="flex items-center space-x-1">
-                        {Array.from({ length: Math.min(5, getTotalPages()) }, (_, i) => {
-                          const pageNum = getPageNumbers()[i];
-                          return (
-                            <Button
-                              key={pageNum}
-                              variant={currentPage === pageNum ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => setCurrentPage(pageNum)}
-                              className="w-8 h-8 p-0"
-                            >
-                              {pageNum}
-                            </Button>
-                          );
-                        })}
+                  {/* Pagination */}
+                  {getTotalPages() > 1 && (
+                    <div className="flex items-center justify-between space-x-2 py-6 border-t">
+                      <div className="text-sm text-gray-500">
+                        Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredCases.length)} of {filteredCases.length} cases
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage(Math.min(getTotalPages(), currentPage + 1))}
-                        disabled={currentPage === getTotalPages()}
-                      >
-                        Next
-                      </Button>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                          disabled={currentPage === 1}
+                        >
+                          Previous
+                        </Button>
+                        <div className="flex items-center space-x-1">
+                          {Array.from({ length: Math.min(5, getTotalPages()) }, (_, i) => {
+                            const pageNum = getPageNumbers()[i];
+                            return (
+                              <Button
+                                key={pageNum}
+                                variant={currentPage === pageNum ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setCurrentPage(pageNum)}
+                                className="w-8 h-8 p-0"
+                              >
+                                {pageNum}
+                              </Button>
+                            );
+                          })}
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(Math.min(getTotalPages(), currentPage + 1))}
+                          disabled={currentPage === getTotalPages()}
+                        >
+                          Next
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
                 </div>
               )}
             </CardContent>
