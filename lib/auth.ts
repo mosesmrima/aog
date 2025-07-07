@@ -116,20 +116,7 @@ export async function signOut() {
 
 export async function getCurrentUser(): Promise<User | null> {
   try {
-    // First check if we have a valid session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError) {
-      console.error('Session error in getCurrentUser:', sessionError);
-      return null;
-    }
-    
-    if (!session) {
-      console.log('No session found in getCurrentUser');
-      return null;
-    }
-
-    // Get user from session
+    // Get user from session (this already validates the session)
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
     if (userError) {
@@ -142,9 +129,9 @@ export async function getCurrentUser(): Promise<User | null> {
       return null;
     }
 
-    // Add timeout for database queries (5 seconds)
+    // Add timeout for database queries (3 seconds for faster failure)
     const dbTimeout = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Database query timeout')), 5000)
+      setTimeout(() => reject(new Error('Database query timeout')), 3000)
     );
 
     try {
@@ -170,22 +157,28 @@ export async function getCurrentUser(): Promise<User | null> {
         return null;
       }
 
-      // Get department assignments with timeout
-      const departmentsPromise = supabase
-        .from('user_departments')
-        .select(`
-          departments (name)
-        `)
-        .eq('user_id', user.id);
+      // Get department assignments with timeout (non-critical, continue if fails)
+      let userDepartments: any[] = [];
+      try {
+        const departmentsPromise = supabase
+          .from('user_departments')
+          .select(`
+            departments (name)
+          `)
+          .eq('user_id', user.id);
 
-      const { data: userDepartments, error: deptError } = await Promise.race([
-        departmentsPromise,
-        dbTimeout
-      ]) as any;
+        const { data, error: deptError } = await Promise.race([
+          departmentsPromise,
+          dbTimeout
+        ]) as any;
 
-      if (deptError) {
-        console.warn('Department query error (non-critical):', deptError);
-        // Continue without departments if this fails
+        if (deptError) {
+          console.warn('Department query error (non-critical):', deptError);
+        } else {
+          userDepartments = data || [];
+        }
+      } catch (deptTimeoutError) {
+        console.warn('Department query timeout (non-critical):', deptTimeoutError);
       }
 
       return {
@@ -194,7 +187,7 @@ export async function getCurrentUser(): Promise<User | null> {
         full_name: profile.full_name,
         is_admin: profile.is_admin,
         is_approved: profile.is_approved,
-        departments: userDepartments?.map((ud: any) => ud.departments.name) || [],
+        departments: userDepartments.map((ud: any) => ud.departments.name) || [],
       };
 
     } catch (timeoutError) {
