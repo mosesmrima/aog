@@ -198,25 +198,95 @@ export class LegalAffairsCSVImporter {
       if (normalizedRecords.length > 0) {
         onProgress?.({
           progress: 85,
-          message: `Inserting ${normalizedRecords.length} records to database...`
+          message: `Deduplicating and inserting ${normalizedRecords.length} records...`
+        });
+
+        // Deduplicate records by AG File Reference within this batch
+        // Merge data from duplicate records to create the most complete record
+        const recordMap = new Map<string, LegalAffairsCaseRecord>();
+        
+        for (const record of normalizedRecords) {
+          const agRef = record.ag_file_reference;
+          
+          if (recordMap.has(agRef)) {
+            // Merge with existing record, keeping non-null values
+            const existing = recordMap.get(agRef)!;
+            const merged = { ...existing };
+            
+            // Merge each field, preferring non-null values
+            Object.keys(record).forEach(key => {
+              const typedKey = key as keyof LegalAffairsCaseRecord;
+              const newValue = record[typedKey];
+              if (newValue !== null && newValue !== undefined && newValue !== '') {
+                (merged as any)[typedKey] = newValue;
+              }
+            });
+            
+            recordMap.set(agRef, merged);
+            result.duplicates++;
+          } else {
+            recordMap.set(agRef, record);
+          }
+        }
+        
+        const deduplicatedRecords = Array.from(recordMap.values());
+
+        onProgress?.({
+          progress: 87,
+          message: `Inserting ${deduplicatedRecords.length} unique records to database...`
         });
 
         const { data, error } = await supabase
           .from('government_cases')
-          .upsert(normalizedRecords, {
+          .upsert(deduplicatedRecords, {
             onConflict: 'ag_file_reference',
             ignoreDuplicates: false
           })
           .select('id');
 
         if (error) {
-          result.errors.push(`Database error: ${error.message}`);
-          await this.updateBatchStatus(batchId, 'failed', error.message);
+          // If batch upsert fails, try individual inserts as fallback
+          console.warn('Batch upsert failed, attempting individual inserts:', error.message);
+          
+          let individualSuccess = 0;
+          let individualFailures = 0;
+          
+          for (const record of deduplicatedRecords) {
+            try {
+              const { error: individualError } = await supabase
+                .from('government_cases')
+                .upsert([record], {
+                  onConflict: 'ag_file_reference',
+                  ignoreDuplicates: false
+                });
+              
+              if (individualError) {
+                result.errors.push(`Record ${record.ag_file_reference}: ${individualError.message}`);
+                individualFailures++;
+              } else {
+                individualSuccess++;
+              }
+            } catch (err) {
+              result.errors.push(`Record ${record.ag_file_reference}: ${err instanceof Error ? err.message : 'Unknown error'}`);
+              individualFailures++;
+            }
+          }
+          
+          if (individualSuccess > 0) {
+            result.imported = individualSuccess;
+            result.success = true;
+            result.errors.push(`Batch insert failed, individual fallback: ${individualSuccess} successful, ${individualFailures} failed`);
+          } else {
+            result.errors.push(`Database error: ${error.message}`);
+            await this.updateBatchStatus(batchId, 'failed', error.message);
+          }
         } else {
           result.imported = data?.length || 0;
           result.success = true;
-          
-          // Update batch with final statistics
+        }
+        
+        // Update batch with final statistics
+        if (result.success) {
           await this.updateBatchStatus(batchId, 'completed', undefined, {
             imported: result.imported,
             skipped: result.skipped,
@@ -227,7 +297,7 @@ export class LegalAffairsCSVImporter {
 
       onProgress?.({
         progress: 100,
-        message: `Import completed: ${result.imported} imported, ${result.skipped} skipped, ${result.duplicates} duplicates`
+        message: `Import completed: ${result.imported} imported, ${result.skipped} skipped, ${result.duplicates} duplicates merged`
       });
 
       return result;
