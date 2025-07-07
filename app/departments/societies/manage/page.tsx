@@ -50,7 +50,7 @@ import {
 import { useAuth } from '@/components/providers/auth-provider';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase';
-import { SocietiesCSVImporter } from '@/lib/societies-csv-importer';
+import { SocietiesCSVImportDialog } from '@/components/societies/csv-import-dialog';
 
 interface Society {
   id: string;
@@ -103,10 +103,8 @@ export default function SocietiesManagePage() {
   const [dataSources, setDataSources] = useState<string[]>([]);
   const [statusOptions, setStatusOptions] = useState<string[]>([]);
 
-  // Import state
-  const [isImporting, setIsImporting] = useState(false);
-  const [importProgress, setImportProgress] = useState(0);
-  const [importMessage, setImportMessage] = useState('');
+  // Import dialog state
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!isLoading) {
@@ -209,71 +207,9 @@ export default function SocietiesManagePage() {
     }
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !user) return;
-
-    if (!file.name.endsWith('.csv')) {
-      toast({
-        title: "Invalid File Type",
-        description: "Please select a CSV file.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      setIsImporting(true);
-      setImportProgress(0);
-      setImportMessage('Reading CSV file...');
-
-      const text = await file.text();
-      const importer = new SocietiesCSVImporter(user.id);
-      
-      // Parse CSV
-      setImportMessage('Parsing CSV data...');
-      const records = importer.parseCSV(text);
-      
-      if (records.length === 0) {
-        throw new Error('No valid records found in CSV file');
-      }
-
-      // Import records
-      const result = await importer.importRecords(
-        records,
-        (progress) => {
-          setImportProgress(progress.progress);
-          setImportMessage(progress.message);
-        },
-        file.name
-      );
-
-      if (result.success) {
-        toast({
-          title: "Import Successful",
-          description: `Imported ${result.imported} societies. ${result.skipped} skipped, ${result.duplicates} duplicates merged.`,
-        });
-        
-        // Reload societies data
-        await loadSocieties();
-      } else {
-        throw new Error(result.errors.join(', '));
-      }
-
-    } catch (error) {
-      console.error('Import error:', error);
-      toast({
-        title: "Import Failed",
-        description: error instanceof Error ? error.message : "Unknown error occurred",
-        variant: "destructive",
-      });
-    } finally {
-      setIsImporting(false);
-      setImportProgress(0);
-      setImportMessage('');
-      // Reset file input
-      event.target.value = '';
-    }
+  const handleImportComplete = () => {
+    // Reload societies data after successful import
+    loadSocieties();
   };
 
   const exportSocieties = async () => {
@@ -415,27 +351,14 @@ export default function SocietiesManagePage() {
               </div>
               
               <div className="flex items-center space-x-3">
-                <input
-                  type="file"
-                  accept=".csv"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                  id="csv-upload"
-                  disabled={isImporting}
-                />
-                <label htmlFor="csv-upload">
-                  <Button 
-                    variant="outline" 
-                    disabled={isImporting}
-                    className="cursor-pointer"
-                    asChild
-                  >
-                    <span>
-                      <Upload className="w-4 h-4 mr-2" />
-                      {isImporting ? 'Importing...' : 'Import CSV'}
-                    </span>
-                  </Button>
-                </label>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsImportDialogOpen(true)}
+                  className="flex items-center space-x-2"
+                >
+                  <Upload className="w-4 h-4" />
+                  <span>Import CSV</span>
+                </Button>
                 
                 <Button onClick={exportSocieties} variant="outline">
                   <Download className="w-4 h-4 mr-2" />
@@ -449,26 +372,6 @@ export default function SocietiesManagePage() {
               </div>
             </div>
 
-            {/* Import Progress */}
-            {isImporting && (
-              <Card className="mb-6">
-                <CardContent className="pt-6">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span>Import Progress</span>
-                      <span>{importProgress}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-blue-500 h-2 rounded-full transition-all duration-300" 
-                        style={{ width: `${importProgress}%` }}
-                      ></div>
-                    </div>
-                    <p className="text-sm text-gray-600">{importMessage}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
           </motion.div>
 
           {/* Filters */}
@@ -756,6 +659,14 @@ export default function SocietiesManagePage() {
           </Card>
         </div>
       </main>
+
+      {/* CSV Import Dialog */}
+      <SocietiesCSVImportDialog
+        open={isImportDialogOpen}
+        onOpenChange={setIsImportDialogOpen}
+        onImportComplete={handleImportComplete}
+        userId={user?.id || ''}
+      />
     </div>
   );
 }

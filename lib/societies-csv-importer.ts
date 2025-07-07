@@ -591,8 +591,70 @@ export class SocietiesCSVImporter {
           return isoDate;
         }
         
-        // If no format matches, log and return undefined
-        console.warn(`Unrecognized date format: ${dateStr}`);
+        // Handle European dot format (DD.MM.YYYY, DD.M.YYYY, D.M.YY)
+        else if (cleanDate.match(/^\d{1,2}\.\d{1,2}\.\d{2,4}$/)) {
+          const parts = cleanDate.split('.');
+          const day = parseInt(parts[0]);
+          const month = parseInt(parts[1]);
+          let year = parseInt(parts[2]);
+          
+          // Convert 2-digit years to 4-digit (European style)
+          if (year < 100) {
+            // For European dates, assume 50+ means 1900s, otherwise 2000s
+            year = year > 50 ? 1900 + year : 2000 + year;
+          }
+          
+          // Validate date components
+          if (month < 1 || month > 12) {
+            console.warn(`Invalid month in European date: ${dateStr} (month=${month})`);
+            return undefined;
+          }
+          
+          if (day < 1 || day > 31) {
+            console.warn(`Invalid day in European date: ${dateStr} (day=${day})`);
+            return undefined;
+          }
+          
+          // Additional validation for days in specific months
+          const daysInMonth = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+          if (day > daysInMonth[month - 1]) {
+            console.warn(`Invalid day for month in European date: ${dateStr} (day=${day}, month=${month})`);
+            return undefined;
+          }
+          
+          // Special validation for February in non-leap years
+          if (month === 2 && day === 29) {
+            const isLeapYear = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+            if (!isLeapYear) {
+              console.warn(`Invalid leap day in non-leap year: ${dateStr}`);
+              return undefined;
+            }
+          }
+          
+          // Validate year range
+          if (year < 1800 || year > new Date().getFullYear() + 1) {
+            console.warn(`Year out of reasonable range in European date: ${dateStr} (year=${year})`);
+            return undefined;
+          }
+          
+          // Create and validate ISO date string
+          const isoDate = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+          
+          // Final validation by creating a Date object
+          const testDate = new Date(isoDate);
+          if (testDate.getFullYear() !== year || testDate.getMonth() + 1 !== month || testDate.getDate() !== day) {
+            console.warn(`European date validation failed: ${dateStr} -> ${isoDate}`);
+            return undefined;
+          }
+          
+          return isoDate;
+        }
+        
+        // If no format matches, log and return undefined (with reduced spam)
+        if (!cleanDate.match(/^(ewe|null|undefined|\d{4,})$/i)) {
+          // Only log if it looks like a real date attempt (not obviously invalid)
+          console.warn(`Unrecognized date format: ${dateStr}`);
+        }
         return undefined;
         
       } catch (err) {
