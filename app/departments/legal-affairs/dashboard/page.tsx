@@ -55,16 +55,17 @@ export default function LegalAffairsDashboardPage() {
 
       const casesData = cases || [];
       const totalCases = casesData.length;
-      const activeCases = casesData.filter(c => 
-        c.current_case_status && 
-        !c.current_case_status.toLowerCase().includes('concluded') &&
-        !c.current_case_status.toLowerCase().includes('closed')
-      ).length;
-      const concludedCases = casesData.filter(c => 
-        c.current_case_status && 
-        (c.current_case_status.toLowerCase().includes('concluded') ||
-         c.current_case_status.toLowerCase().includes('closed'))
-      ).length;
+      const activeCases = casesData.filter(c => {
+        const status = c.current_case_status?.toLowerCase?.() || '';
+        return c.current_case_status && 
+               !status.includes('concluded') &&
+               !status.includes('closed');
+      }).length;
+      const concludedCases = casesData.filter(c => {
+        const status = c.current_case_status?.toLowerCase?.() || '';
+        return c.current_case_status && 
+               (status.includes('concluded') || status.includes('closed'));
+      }).length;
 
       // Cases this month
       const currentMonth = new Date().getMonth();
@@ -76,7 +77,7 @@ export default function LegalAffairsDashboardPage() {
 
       // Calculate total potential liability
       const totalLiability = casesData.reduce((sum, case_) => {
-        if (case_.potential_liability_kshs) {
+        if (case_.potential_liability_kshs && typeof case_.potential_liability_kshs === 'string') {
           const amount = parseFloat(case_.potential_liability_kshs.replace(/[,'"]/g, ''));
           return sum + (isNaN(amount) ? 0 : amount);
         }
@@ -86,9 +87,11 @@ export default function LegalAffairsDashboardPage() {
       // Analyze court stations
       const stationCounts = {};
       casesData.forEach(case_ => {
-        if (case_.court_station) {
+        if (case_.court_station && typeof case_.court_station === 'string') {
           const station = case_.court_station.trim().toUpperCase();
-          stationCounts[station] = (stationCounts[station] || 0) + 1;
+          if (station) {
+            stationCounts[station] = (stationCounts[station] || 0) + 1;
+          }
         }
       });
       
@@ -104,7 +107,7 @@ export default function LegalAffairsDashboardPage() {
       // Analyze cases by nature
       const natureCounts = {};
       casesData.forEach(case_ => {
-        if (case_.nature_of_claim_new) {
+        if (case_.nature_of_claim_new && typeof case_.nature_of_claim_new === 'string') {
           const nature = case_.nature_of_claim_new.trim();
           if (nature) {
             natureCounts[nature] = (natureCounts[nature] || 0) + 1;
@@ -397,8 +400,8 @@ export default function LegalAffairsDashboardPage() {
                   {stats.casesByNature.length > 0 ? (
                     stats.casesByNature.map((type, index) => (
                       <div key={type.nature} className="flex items-center justify-between">
-                        <span className="text-sm font-medium truncate max-w-[120px]" title={type.nature}>
-                          {type.nature.length > 20 ? `${type.nature.substring(0, 20)}...` : type.nature}
+                        <span className="text-sm font-medium truncate max-w-[120px]" title={type.nature || ''}>
+                          {type.nature && type.nature.length > 20 ? `${type.nature.substring(0, 20)}...` : (type.nature || 'Unknown')}
                         </span>
                         <div className="flex items-center space-x-2">
                           <div className="w-20 bg-gray-200 rounded-full h-2">

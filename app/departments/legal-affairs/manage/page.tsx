@@ -325,7 +325,11 @@ export default function LegalAffairsManagePage() {
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string | null) => {
+    if (!status || typeof status !== 'string') {
+      return 'bg-gray-100 text-gray-800';
+    }
+    
     const lowerStatus = status.toLowerCase();
     if (lowerStatus.includes('concluded') || lowerStatus.includes('judgment delivered')) {
       return 'bg-green-100 text-green-800';
@@ -550,16 +554,16 @@ export default function LegalAffairsManagePage() {
                           {cases.map((case_) => (
                             <TableRow key={case_.id} className="hover:bg-gray-50">
                               <TableCell className="font-mono text-xs">
-                                {case_.ag_file_reference}
+                                {case_.ag_file_reference || '-'}
                               </TableCell>
-                              <TableCell>{case_.court_station}</TableCell>
+                              <TableCell>{case_.court_station || '-'}</TableCell>
                               <TableCell className="max-w-xs">
-                                <div className="truncate" title={case_.case_parties}>
-                                  {case_.case_parties}
+                                <div className="truncate" title={case_.case_parties || ''}>
+                                  {case_.case_parties || '-'}
                                 </div>
                               </TableCell>
                               <TableCell className="max-w-xs">
-                                <div className="truncate" title={case_.nature_of_claim_new || case_.nature_of_claim_old}>
+                                <div className="truncate" title={case_.nature_of_claim_new || case_.nature_of_claim_old || ''}>
                                   {case_.nature_of_claim_new || case_.nature_of_claim_old || '-'}
                                 </div>
                               </TableCell>
@@ -568,7 +572,7 @@ export default function LegalAffairsManagePage() {
                               </TableCell>
                               <TableCell>
                                 <Badge className={getStatusColor(case_.current_case_status)}>
-                                  {case_.current_case_status}
+                                  {case_.current_case_status || 'Unknown'}
                                 </Badge>
                               </TableCell>
                               <TableCell>
