@@ -37,7 +37,6 @@ import {
 } from '@/components/ui/dialog';
 import { supabase } from '@/lib/supabase';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { landCasesThematicData, getTopLandCaseCategories, totalLandCases } from '@/lib/land-cases-data';
 
 interface GovernmentCase {
   id: string;
@@ -73,13 +72,23 @@ export default function PublicCasesRegistryPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(20);
   
-  // Statistics
+  // Statistics and Analytics
   const [stats, setStats] = useState({
     totalCases: 0,
     activeCases: 0,
     concludedCases: 0,
     thisYear: 0,
+    landCases: 0,
+    landCasesPercentage: 0,
+    resolutionRate: 0,
+    topCourt: 'N/A',
     avgProcessingTime: '12-18 months'
+  });
+
+  const [analytics, setAnalytics] = useState({
+    yearDistribution: [] as { year: number; count: number }[],
+    natureOfClaims: [] as { nature: string; count: number }[],
+    courtDistribution: [] as { court: string; count: number }[]
   });
 
   useEffect(() => {
@@ -118,34 +127,109 @@ export default function PublicCasesRegistryPage() {
       const casesData = data || [];
       setCases(casesData);
       
-      // Calculate statistics
+      // Calculate comprehensive statistics and analytics
+      await calculateStatisticsAndAnalytics(casesData);
+      
+    } catch (error) {
+      console.error('Error loading cases:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const calculateStatisticsAndAnalytics = async (casesData: GovernmentCase[]) => {
+    try {
+      // Basic statistics
       const totalCases = casesData.length;
-      const activeCases = casesData.filter(c => 
-        c.current_case_status && 
-        !c.current_case_status.toLowerCase().includes('concluded') &&
-        !c.current_case_status.toLowerCase().includes('closed')
-      ).length;
+      
+      // Better concluded case detection based on real data patterns
       const concludedCases = casesData.filter(c => 
         c.current_case_status && 
         (c.current_case_status.toLowerCase().includes('concluded') ||
+         c.current_case_status.toLowerCase().includes('judgement') ||
+         c.current_case_status.toLowerCase().includes('dismissed') ||
          c.current_case_status.toLowerCase().includes('closed'))
       ).length;
       
+      const activeCases = totalCases - concludedCases;
+      
+      // Land cases calculation
+      const landCases = casesData.filter(c => 
+        (c.nature_of_claim_new && c.nature_of_claim_new.toLowerCase().includes('land')) ||
+        (c.nature_of_claim_old && c.nature_of_claim_old.toLowerCase().includes('land'))
+      ).length;
+      
+      const landCasesPercentage = totalCases > 0 ? Math.round((landCases / totalCases) * 100 * 10) / 10 : 0;
+      const resolutionRate = totalCases > 0 ? Math.round((concludedCases / totalCases) * 100 * 10) / 10 : 0;
+      
+      // Current year cases
       const currentYear = new Date().getFullYear();
       const thisYear = casesData.filter(c => c.case_year === currentYear).length;
+      
+      // Top court calculation
+      const courtCount = casesData.reduce((acc, c) => {
+        if (c.court_station) {
+          const court = c.court_station.toUpperCase();
+          acc[court] = (acc[court] || 0) + 1;
+        }
+        return acc;
+      }, {} as Record<string, number>);
+      
+      const topCourt = Object.entries(courtCount)
+        .sort(([,a], [,b]) => b - a)[0]?.[0] || 'N/A';
+      
+      // Year distribution for analytics
+      const yearCount = casesData.reduce((acc, c) => {
+        if (c.case_year) {
+          acc[c.case_year] = (acc[c.case_year] || 0) + 1;
+        }
+        return acc;
+      }, {} as Record<number, number>);
+      
+      const yearDistribution = Object.entries(yearCount)
+        .map(([year, count]) => ({ year: parseInt(year), count }))
+        .sort((a, b) => b.year - a.year)
+        .slice(0, 10);
+      
+      // Nature of claims distribution
+      const natureCount = casesData.reduce((acc, c) => {
+        if (c.nature_of_claim_new) {
+          acc[c.nature_of_claim_new] = (acc[c.nature_of_claim_new] || 0) + 1;
+        }
+        return acc;
+      }, {} as Record<string, number>);
+      
+      const natureOfClaims = Object.entries(natureCount)
+        .map(([nature, count]) => ({ nature, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
+      
+      // Court distribution for analytics
+      const courtDistribution = Object.entries(courtCount)
+        .map(([court, count]) => ({ court, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
       
       setStats({
         totalCases,
         activeCases,
         concludedCases,
         thisYear,
+        landCases,
+        landCasesPercentage,
+        resolutionRate,
+        topCourt,
         avgProcessingTime: '12-18 months'
       });
       
+      setAnalytics({
+        yearDistribution,
+        natureOfClaims,
+        courtDistribution
+      });
+      
     } catch (error) {
-      console.error('Error loading cases:', error);
-    } finally {
-      setIsLoading(false);
+      console.error('Error calculating analytics:', error);
     }
   };
 
@@ -208,11 +292,7 @@ export default function PublicCasesRegistryPage() {
       filtered = filtered.filter(case_ => {
         const caseNature = (case_.nature_of_claim_new || case_.nature_of_claim_old || '').toLowerCase();
         return selectedLandThemes.some(theme => 
-          caseNature.includes(theme.toLowerCase()) ||
-          landCasesThematicData.some(landTheme => 
-            landTheme.theme.toLowerCase() === theme.toLowerCase() &&
-            caseNature.includes(landTheme.theme.toLowerCase().split(' ')[0])
-          )
+          caseNature.includes(theme.toLowerCase())
         );
       });
     }
@@ -242,13 +322,6 @@ export default function PublicCasesRegistryPage() {
       return 'bg-blue-100 text-blue-800';
     }
     return 'bg-gray-100 text-gray-800';
-  };
-
-  const formatLargeNumber = (num: number) => {
-    if (num >= 1e9) return (num / 1e9).toFixed(1) + 'B';
-    if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
-    if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
-    return num.toString();
   };
 
   const exportToCSV = () => {
@@ -283,56 +356,31 @@ export default function PublicCasesRegistryPage() {
   };
 
   const getTopCourtStation = () => {
-    const courtCounts = cases.reduce((acc, case_) => {
-      if (case_.court_station) {
-        acc[case_.court_station] = (acc[case_.court_station] || 0) + 1;
-      }
-      return acc;
-    }, {} as Record<string, number>);
-    
-    const topCourt = Object.entries(courtCounts)
-      .sort(([,a], [,b]) => b - a)[0];
-    
-    return topCourt ? topCourt[0] : 'N/A';
+    return stats.topCourt;
   };
 
   const getYearlyDistribution = () => {
-    const yearCounts = cases.reduce((acc, case_) => {
-      if (case_.case_year) {
-        acc[case_.case_year] = (acc[case_.case_year] || 0) + 1;
-      }
-      return acc;
-    }, {} as Record<number, number>);
+    if (analytics.yearDistribution.length === 0) return [];
     
-    const maxCount = Math.max(...Object.values(yearCounts));
+    const maxCount = Math.max(...analytics.yearDistribution.map(d => d.count));
     
-    return Object.entries(yearCounts)
-      .map(([year, count]) => ({
-        year: parseInt(year),
-        count,
-        total: maxCount
-      }))
-      .sort((a, b) => b.year - a.year);
+    return analytics.yearDistribution.map(({ year, count }) => ({
+      year,
+      count,
+      total: maxCount
+    }));
   };
 
   const getTopClaims = () => {
-    const claimCounts = cases.reduce((acc, case_) => {
-      const claim = case_.nature_of_claim_new || case_.nature_of_claim_old;
-      if (claim) {
-        acc[claim] = (acc[claim] || 0) + 1;
-      }
-      return acc;
-    }, {} as Record<string, number>);
+    if (analytics.natureOfClaims.length === 0) return [];
     
-    const maxCount = Math.max(...Object.values(claimCounts));
+    const maxCount = Math.max(...analytics.natureOfClaims.map(c => c.count));
     
-    return Object.entries(claimCounts)
-      .map(([claim, count]) => ({
-        claim,
-        count,
-        total: maxCount
-      }))
-      .sort((a, b) => b.count - a.count);
+    return analytics.natureOfClaims.map(({ nature, count }) => ({
+      claim: nature,
+      count,
+      total: maxCount
+    }));
   };
 
   const getPaginatedCases = (): GovernmentCase[] => {
@@ -408,7 +456,7 @@ export default function PublicCasesRegistryPage() {
                 <div className="text-blue-200 text-sm">Concluded Cases</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-white">{totalLandCases.toLocaleString()}</div>
+                <div className="text-3xl font-bold text-white">{stats.landCases.toLocaleString()}</div>
                 <div className="text-blue-200 text-sm">Land Cases</div>
               </div>
             </div>
@@ -535,22 +583,22 @@ export default function PublicCasesRegistryPage() {
                             <div>
                               <Label className="text-sm font-medium mb-2 block">Land Case Themes</Label>
                               <div className="space-y-2 max-h-40 overflow-y-auto">
-                                {getTopLandCaseCategories(10).map((theme) => (
-                                  <div key={theme.id} className="flex items-center space-x-2">
+                                {analytics.natureOfClaims.slice(0, 10).map((theme, _index) => (
+                                  <div key={_index} className="flex items-center space-x-2">
                                     <Checkbox
-                                      id={`theme-${theme.id}`}
-                                      checked={selectedLandThemes.includes(theme.theme)}
+                                      id={`theme-${_index}`}
+                                      checked={selectedLandThemes.includes(theme.nature)}
                                       onCheckedChange={(checked) => {
                                         if (checked) {
-                                          setSelectedLandThemes([...selectedLandThemes, theme.theme]);
+                                          setSelectedLandThemes([...selectedLandThemes, theme.nature]);
                                         } else {
-                                          setSelectedLandThemes(selectedLandThemes.filter(t => t !== theme.theme));
+                                          setSelectedLandThemes(selectedLandThemes.filter(t => t !== theme.nature));
                                         }
                                       }}
                                     />
-                                    <Label htmlFor={`theme-${theme.id}`} className="text-xs">
-                                      {theme.theme.length > 40 ? `${theme.theme.substring(0, 40)}...` : theme.theme}
-                                      <span className="text-gray-500 ml-1">({theme.caseCount})</span>
+                                    <Label htmlFor={`theme-${_index}`} className="text-xs">
+                                      {theme.nature.length > 40 ? `${theme.nature.substring(0, 40)}...` : theme.nature}
+                                      <span className="text-gray-500 ml-1">({theme.count})</span>
                                     </Label>
                                   </div>
                                 ))}
@@ -641,7 +689,7 @@ export default function PublicCasesRegistryPage() {
                       <MapPin className="w-5 h-5 text-amber-600" />
                     </div>
                     <div className="text-2xl font-bold text-amber-700">
-                      {stats.totalCases > 0 ? Math.round((totalLandCases / stats.totalCases) * 100) : 0}%
+                      {stats.landCasesPercentage}%
                     </div>
                     <p className="text-sm text-amber-600">
                       Of all government cases
@@ -659,7 +707,7 @@ export default function PublicCasesRegistryPage() {
                       Case Distribution by Year
                     </h4>
                     <div className="space-y-2">
-                      {getYearlyDistribution().slice(0, 5).map((year, index) => (
+                      {getYearlyDistribution().slice(0, 5).map((year, _index) => (
                         <div key={year.year} className="flex items-center justify-between">
                           <span className="text-sm text-gray-600">{year.year}</span>
                           <div className="flex items-center space-x-2">
@@ -682,7 +730,7 @@ export default function PublicCasesRegistryPage() {
                       Top Nature of Claims
                     </h4>
                     <div className="space-y-2">
-                      {getTopClaims().slice(0, 5).map((claim, index) => (
+                      {getTopClaims().slice(0, 5).map((claim, _index) => (
                         <div key={claim.claim} className="flex items-center justify-between">
                           <span className="text-sm text-gray-600 truncate max-w-xs" title={claim.claim}>
                             {claim.claim.length > 30 ? `${claim.claim.substring(0, 30)}...` : claim.claim}
