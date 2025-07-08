@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 import { Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LoginForm } from '@/components/auth/login-form';
@@ -45,8 +46,14 @@ export default function AuthPage() {
           transition={{ duration: 0.5 }}
           className="text-center max-w-md mx-auto backdrop-blur-lg bg-white/80 rounded-xl p-8 border border-white/20 shadow-2xl"
         >
-          <div className="w-16 h-16 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
-            <Shield className="w-8 h-8 text-white" />
+          <div className="flex items-center justify-center mx-auto mb-6">
+            <Image
+              src="/oag-logo.png"
+              alt="Office of the Attorney General and Department of Justice"
+              width={180}
+              height={45}
+              className="h-10 w-auto"
+            />
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-4">
             Approval Pending
@@ -76,9 +83,13 @@ export default function AuthPage() {
           className="text-center"
         >
           <div className="flex justify-center mb-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-              <Shield className="w-6 h-6 text-white" />
-            </div>
+            <Image
+              src="/oag-logo.png"
+              alt="Office of the Attorney General and Department of Justice"
+              width={200}
+              height={50}
+              className="h-10 sm:h-12 w-auto"
+            />
           </div>
           <h1 className="text-2xl font-bold text-gray-900">OAG Data Portal</h1>
         </motion.div>

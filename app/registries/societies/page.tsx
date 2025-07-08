@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import Image from 'next/image';
 import { 
   Building2, 
   Search, 
@@ -611,8 +612,14 @@ export default function SocietiesRegistryPage() {
             </Link>
             
             <div className="flex items-center mb-6">
-              <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-lg mr-4">
-                <Building2 className="w-8 h-8 text-white" />
+              <div className="flex items-center justify-center mr-4">
+                <Image
+                  src="/oag-logo.png"
+                  alt="Office of the Attorney General and Department of Justice"
+                  width={240}
+                  height={60}
+                  className="h-10 sm:h-12 w-auto filter brightness-0 invert"
+                />
               </div>
               <div>
                 <h1 className="text-4xl font-bold text-white mb-2">Societies Registry</h1>

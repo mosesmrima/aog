@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 import { 
   Shield, 
   ArrowRight, 
@@ -63,8 +64,15 @@ export default function Home() {
               className="space-y-8"
             >
               <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center shadow-lg">
-                  <Shield className="w-6 h-6 text-white" />
+                <div className="flex items-center justify-center">
+                  <Image
+                    src="/oag-logo.png"
+                    alt="Office of the Attorney General and Department of Justice"
+                    width={240}
+                    height={60}
+                    className="h-10 sm:h-12 w-auto"
+                    priority
+                  />
                 </div>
               </div>
 

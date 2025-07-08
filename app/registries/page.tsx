@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import Image from 'next/image';
 import { 
   Heart, 
   Scale, 
@@ -103,9 +104,13 @@ export default function RegistriesPage() {
             className="text-center"
           >
             <div className="flex items-center justify-center mb-6">
-              <div className="w-16 h-16 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-lg">
-                <Shield className="w-8 h-8 text-white" />
-              </div>
+              <Image
+                src="/oag-logo.png"
+                alt="Office of the Attorney General and Department of Justice"
+                width={280}
+                height={70}
+                className="h-12 sm:h-14 w-auto filter brightness-0 invert"
+              />
             </div>
             
             <h1 className="text-3xl sm:text-4xl lg:text-6xl font-bold text-white mb-6">
