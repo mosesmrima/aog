@@ -281,9 +281,13 @@ export default function MarriagesRegistryPage() {
                       </div>
 
                       <div className="mt-4 flex justify-end">
-                        <Button variant="outline" className="flex items-center gap-2">
+                        <Button 
+                          variant="outline" 
+                          className="flex items-center gap-2"
+                          onClick={() => window.open('https://oag.ecitizen.go.ke/', '_blank')}
+                        >
                           <FileText className="w-4 h-4" />
-                          Request Official Copy
+                          Request Certified Copy
                         </Button>
                       </div>
                     </CardContent>
