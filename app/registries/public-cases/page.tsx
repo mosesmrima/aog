@@ -19,7 +19,6 @@ import {
   BarChart3,
   MapPin,
   Gavel,
-  DollarSign,
   CheckCircle
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -47,11 +46,9 @@ interface GovernmentCase {
   court_rank: string | null;
   case_no: string | null;
   case_year: number | null;
-  case_parties: string | null;
   nature_of_claim_new: string | null;
   nature_of_claim_old: string | null;
   current_case_status: string | null;
-  potential_liability_kshs: string | null;
   region: string | null;
   ministry: string | null;
   created_at: string;
@@ -81,7 +78,6 @@ export default function PublicCasesRegistryPage() {
     totalCases: 0,
     activeCases: 0,
     concludedCases: 0,
-    totalLiability: 0,
     thisYear: 0,
     avgProcessingTime: '12-18 months'
   });
@@ -108,11 +104,9 @@ export default function PublicCasesRegistryPage() {
           court_rank,
           case_no,
           case_year,
-          case_parties,
           nature_of_claim_new,
           nature_of_claim_old,
           current_case_status,
-          potential_liability_kshs,
           region,
           ministry,
           created_at
@@ -140,20 +134,10 @@ export default function PublicCasesRegistryPage() {
       const currentYear = new Date().getFullYear();
       const thisYear = casesData.filter(c => c.case_year === currentYear).length;
       
-      // Calculate total potential liability
-      const totalLiability = casesData.reduce((sum, case_) => {
-        if (case_.potential_liability_kshs) {
-          const amount = parseFloat(case_.potential_liability_kshs.replace(/[,'"]/g, ''));
-          return sum + (isNaN(amount) ? 0 : amount);
-        }
-        return sum;
-      }, 0);
-      
       setStats({
         totalCases,
         activeCases,
         concludedCases,
-        totalLiability,
         thisYear,
         avgProcessingTime: '12-18 months'
       });
@@ -173,7 +157,6 @@ export default function PublicCasesRegistryPage() {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(case_ =>
         case_.ag_file_reference?.toLowerCase().includes(query) ||
-        case_.case_parties?.toLowerCase().includes(query) ||
         case_.court_station?.toLowerCase().includes(query) ||
         case_.nature_of_claim_new?.toLowerCase().includes(query) ||
         case_.nature_of_claim_old?.toLowerCase().includes(query) ||
@@ -259,18 +242,6 @@ export default function PublicCasesRegistryPage() {
       return 'bg-blue-100 text-blue-800';
     }
     return 'bg-gray-100 text-gray-800';
-  };
-
-  const formatLiability = (liability: string | null) => {
-    if (!liability) return 'N/A';
-    const amount = parseFloat(liability.replace(/[,'"]/g, ''));
-    if (isNaN(amount)) return liability;
-    return new Intl.NumberFormat('en-KE', {
-      style: 'currency',
-      currency: 'KES',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
   };
 
   const formatLargeNumber = (num: number) => {
@@ -423,7 +394,7 @@ export default function PublicCasesRegistryPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 mt-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-8">
               <div className="text-center">
                 <div className="text-3xl font-bold text-white">{stats.totalCases}</div>
                 <div className="text-blue-200 text-sm">Total Cases</div>
@@ -433,14 +404,8 @@ export default function PublicCasesRegistryPage() {
                 <div className="text-blue-200 text-sm">Active Cases</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-white">{stats.thisYear}</div>
-                <div className="text-blue-200 text-sm">This Year</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-white">
-                  KES {formatLargeNumber(stats.totalLiability)}
-                </div>
-                <div className="text-blue-200 text-sm">Total Liability</div>
+                <div className="text-3xl font-bold text-white">{stats.concludedCases}</div>
+                <div className="text-blue-200 text-sm">Concluded Cases</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold text-white">{totalLandCases.toLocaleString()}</div>
@@ -465,7 +430,7 @@ export default function PublicCasesRegistryPage() {
                 <div className="flex-1 relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <Input
-                    placeholder="Search cases by AG reference, parties, court station, status, or nature of claim..."
+                    placeholder="Search cases by AG reference, court station, status, or nature of claim..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
@@ -635,7 +600,7 @@ export default function PublicCasesRegistryPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Case Status Distribution */}
                 <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
                   <CardContent className="p-4">
@@ -648,22 +613,6 @@ export default function PublicCasesRegistryPage() {
                     </div>
                     <p className="text-sm text-green-600">
                       {stats.concludedCases} of {stats.totalCases} cases concluded
-                    </p>
-                  </CardContent>
-                </Card>
-
-                {/* Average Liability */}
-                <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium text-blue-800">Avg. Liability</h4>
-                      <DollarSign className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div className="text-2xl font-bold text-blue-700">
-                      KES {stats.totalCases > 0 ? formatLargeNumber(stats.totalLiability / stats.totalCases) : '0'}
-                    </div>
-                    <p className="text-sm text-blue-600">
-                      Per case financial exposure
                     </p>
                   </CardContent>
                 </Card>
@@ -865,25 +814,12 @@ export default function PublicCasesRegistryPage() {
                             </div>
                             
                             <div>
-                              {case_.case_parties && (
+                              {case_.ministry && (
                                 <div className="text-sm">
-                                  <span className="font-medium text-gray-700 block mb-1">Parties:</span>
+                                  <span className="font-medium text-gray-700 block mb-1">Ministry:</span>
                                   <p className="text-gray-600 text-xs leading-relaxed">
-                                    {case_.case_parties.length > 100 
-                                      ? `${case_.case_parties.substring(0, 100)}...` 
-                                      : case_.case_parties
-                                    }
+                                    {case_.ministry}
                                   </p>
-                                </div>
-                              )}
-                              
-                              {case_.potential_liability_kshs && (
-                                <div className="text-sm mt-3">
-                                  <span className="font-medium text-gray-700 block mb-1">Potential Liability:</span>
-                                  <div className="flex items-center text-green-600 font-medium">
-                                    <DollarSign className="w-3 h-3 mr-1" />
-                                    {formatLiability(case_.potential_liability_kshs)}
-                                  </div>
                                 </div>
                               )}
                             </div>
@@ -1043,25 +979,6 @@ export default function PublicCasesRegistryPage() {
                         <span className="text-sm font-medium text-gray-600">Nature of Claim (Original):</span>
                         <div className="text-sm mt-1 p-3 bg-gray-50 rounded-md">
                           {selectedCase.nature_of_claim_old}
-                        </div>
-                      </div>
-                    )}
-
-                    {selectedCase.case_parties && (
-                      <div>
-                        <span className="text-sm font-medium text-gray-600">Case Parties:</span>
-                        <div className="text-sm mt-1 p-3 bg-gray-50 rounded-md">
-                          {selectedCase.case_parties}
-                        </div>
-                      </div>
-                    )}
-
-                    {selectedCase.potential_liability_kshs && (
-                      <div>
-                        <span className="text-sm font-medium text-gray-600">Potential Liability:</span>
-                        <div className="text-lg font-semibold text-green-600 mt-1 flex items-center">
-                          <DollarSign className="w-4 h-4 mr-1" />
-                          {formatLiability(selectedCase.potential_liability_kshs)}
                         </div>
                       </div>
                     )}
