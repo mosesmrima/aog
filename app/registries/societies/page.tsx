@@ -518,31 +518,40 @@ export default function SocietiesRegistryPage() {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="mb-8"
         >
-          <Card className="border-0 shadow-lg">
-            <CardContent className="p-6">
-              <div className="flex flex-col lg:flex-row gap-4 items-center">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <Input
-                    placeholder="Search societies by name, registration number, nature, office, or chairman..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
-                  />
+          <div className="space-y-4">
+            <Card className="border-0 shadow-lg">
+              <CardContent className="p-6">
+                <div className="flex flex-col lg:flex-row gap-4 items-center">
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input
+                      placeholder="Search societies by name, registration number, nature, office, or chairman..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => setIsFiltersOpen(!isFiltersOpen)}>
+                      <Filter className="w-4 h-4 mr-2" />
+                      Filters
+                    </Button>
+                    
+                    <Button variant="outline" onClick={exportToCSV} disabled={filteredSocieties.length === 0}>
+                      <Download className="w-4 h-4 mr-2" />
+                      Export
+                    </Button>
+                  </div>
                 </div>
-                
-                <div className="flex gap-2">
-                  <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
-                    <CollapsibleTrigger asChild>
-                      <Button variant="outline">
-                        <Filter className="w-4 h-4 mr-2" />
-                        Filters
-                      </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="absolute top-full left-0 right-0 z-10 mt-2">
-                      <Card className="border shadow-lg">
-                        <CardContent className="p-6">
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+              </CardContent>
+            </Card>
+
+            {/* Filters Panel */}
+            {isFiltersOpen && (
+              <Card className="border shadow-lg">
+                <CardContent className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                             {/* Status Filter */}
                             <div>
                               <Label className="text-sm font-medium mb-2 block">Status</Label>
@@ -681,19 +690,10 @@ export default function SocietiesRegistryPage() {
                               Apply Filters
                             </Button>
                           </div>
-                        </CardContent>
-                      </Card>
-                    </CollapsibleContent>
-                  </Collapsible>
-                  
-                  <Button variant="outline" onClick={exportToCSV} disabled={filteredSocieties.length === 0}>
-                    <Download className="w-4 h-4 mr-2" />
-                    Export
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </motion.div>
 
         {/* Analytics Dashboard */}
