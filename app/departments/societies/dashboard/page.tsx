@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Users, TrendingUp, FileText, Calendar, Building2, Clock, AlertTriangle, MapPin, BarChart3 } from 'lucide-react';
+import { Users, TrendingUp, FileText, Calendar, Building2, Clock, BarChart3 } from 'lucide-react';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/components/providers/auth-provider';
@@ -14,24 +14,20 @@ export default function SocietiesDashboardPage() {
   const router = useRouter();
   const [stats, setStats] = useState({
     totalSocieties: 0,
-    activeSocieties: 0,
-    exemptedSocieties: 0,
-    totalMembers: 0,
+    thisYear: 0,
+    lastYear: 0,
     thisMonth: 0,
-    avgProcessingTime: '2-4 weeks',
-    societyTypes: [],
-    dataSources: [],
-    recentRegistrations: []
+    recent: 0,
+    registrationTrend: [],
+    yearlyBreakdown: []
   });
   
   const [isLoadingStats, setIsLoadingStats] = useState(true);
 
   useEffect(() => {
     if (!isLoading) {
-      if (!user) {
+      if (!user || !user.is_approved) {
         router.push('/auth');
-      } else if (!user.is_approved) {
-        router.push('/pending');
       }
     }
   }, [user, isLoading, router]);
@@ -44,6 +40,7 @@ export default function SocietiesDashboardPage() {
 
   const loadStats = async () => {
     try {
+      setIsLoadingStats(true);
       const { data: societies, error } = await supabase
         .from('societies')
         .select('*');
@@ -53,98 +50,85 @@ export default function SocietiesDashboardPage() {
       const societiesData = societies || [];
       const totalSocieties = societiesData.length;
       
-      // Count active vs exempted societies
-      const exemptedSocieties = societiesData.filter(s => 
-        s.exemption_number || s.data_source === 'exempted_societies'
-      ).length;
-      const activeSocieties = totalSocieties - exemptedSocieties;
-
-      // Calculate total members
-      const totalMembers = societiesData.reduce((sum, society) => {
-        return sum + (society.member_count || 0);
-      }, 0);
-
-      // Societies registered this month
-      const currentMonth = new Date().getMonth();
       const currentYear = new Date().getFullYear();
+      const currentMonth = new Date().getMonth();
+      
+      // Calculate yearly statistics
+      const thisYear = societiesData.filter(s => 
+        s.registration_date && 
+        new Date(s.registration_date).getFullYear() === currentYear
+      ).length;
+      
+      const lastYear = societiesData.filter(s => 
+        s.registration_date && 
+        new Date(s.registration_date).getFullYear() === currentYear - 1
+      ).length;
+
+      // Calculate monthly statistics
       const thisMonth = societiesData.filter(s => {
-        if (s.created_at) {
-          const createdDate = new Date(s.created_at);
-          return createdDate.getMonth() === currentMonth && createdDate.getFullYear() === currentYear;
+        if (s.registration_date) {
+          const regDate = new Date(s.registration_date);
+          return regDate.getMonth() === currentMonth && regDate.getFullYear() === currentYear;
         }
         return false;
       }).length;
 
-      // Analyze society types
-      const typeCounts = {};
+      // Recent registrations (last 30 days)
+      const recent = societiesData.filter(s => 
+        s.created_at && 
+        new Date(s.created_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+      ).length;
+
+      // Registration trend over the last 5 years
+      const registrationTrend = [];
+      for (let i = 4; i >= 0; i--) {
+        const year = currentYear - i;
+        const count = societiesData.filter(s => 
+          s.registration_date && 
+          new Date(s.registration_date).getFullYear() === year
+        ).length;
+        registrationTrend.push({ year, count });
+      }
+
+      // Yearly breakdown
+      const yearCounts = {};
       societiesData.forEach(society => {
-        if (society.nature_of_society && typeof society.nature_of_society === 'string') {
-          const type = society.nature_of_society.trim().toUpperCase();
-          if (type) {
-            typeCounts[type] = (typeCounts[type] || 0) + 1;
-          }
+        if (society.registration_date) {
+          const year = new Date(society.registration_date).getFullYear();
+          yearCounts[year] = (yearCounts[year] || 0) + 1;
         }
       });
-      
-      const societyTypes = Object.entries(typeCounts)
-        .map(([type, count]) => ({
-          type,
-          count,
-          percentage: ((count / totalSocieties) * 100).toFixed(1)
-        }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 5);
 
-      // Analyze data sources
-      const sourceCounts = {};
-      societiesData.forEach(society => {
-        if (society.data_source && typeof society.data_source === 'string') {
-          const source = society.data_source.trim();
-          if (source) {
-            sourceCounts[source] = (sourceCounts[source] || 0) + 1;
-          }
-        }
-      });
-      
-      const dataSources = Object.entries(sourceCounts)
-        .map(([source, count]) => ({
-          source,
-          count,
-          percentage: ((count / totalSocieties) * 100).toFixed(1)
-        }))
-        .sort((a, b) => b.count - a.count);
-
-      // Get recent registrations
-      const recentRegistrations = societiesData
-        .filter(s => s.created_at)
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        .slice(0, 5);
+      const yearlyBreakdown = Object.entries(yearCounts)
+        .map(([year, count]) => ({ year: parseInt(year), count }))
+        .sort((a, b) => b.year - a.year)
+        .slice(0, 10); // Top 10 years
 
       setStats({
         totalSocieties,
-        activeSocieties,
-        exemptedSocieties,
-        totalMembers,
+        thisYear,
+        lastYear,
         thisMonth,
-        avgProcessingTime: '2-4 weeks',
-        societyTypes,
-        dataSources,
-        recentRegistrations
+        recent,
+        registrationTrend,
+        yearlyBreakdown
       });
+
     } catch (error) {
-      console.error('Error loading societies stats:', error);
+      console.error('Error loading stats:', error);
     } finally {
       setIsLoadingStats(false);
     }
   };
 
-  const formatLargeNumber = (num: number) => {
-    if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
-    if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
+  const formatNumber = (num) => {
+    if (num >= 1000) {
+      return (num / 1000).toFixed(1) + 'K';
+    }
     return num.toString();
   };
 
-  if (isLoading) {
+  if (isLoading || isLoadingStats) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50">
         <motion.div
@@ -173,22 +157,22 @@ export default function SocietiesDashboardPage() {
             className="mb-8"
           >
             <div className="flex items-center space-x-4 mb-6">
-              <div className="w-12 h-12 bg-gradient-to-br from-green-600 to-emerald-700 rounded-xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-gradient-to-br from-emerald-600 to-teal-700 rounded-xl flex items-center justify-center">
                 <Building2 className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">Registrar of Societies</h1>
-                <p className="text-gray-600">Society registration and management analytics</p>
+                <h1 className="text-3xl font-bold text-gray-900">Societies Dashboard</h1>
+                <p className="text-gray-600">Overview of society registrations and statistics</p>
               </div>
             </div>
           </motion.div>
 
-          {/* Stats Overview */}
+          {/* Key Statistics */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8"
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
           >
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -196,229 +180,185 @@ export default function SocietiesDashboardPage() {
                 <Building2 className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  {isLoadingStats ? '...' : stats.totalSocieties}
-                </div>
-                <p className="text-xs text-muted-foreground">All registered societies</p>
+                <div className="text-2xl font-bold">{formatNumber(stats.totalSocieties)}</div>
+                <p className="text-xs text-muted-foreground">Registered organizations</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Societies</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">This Year</CardTitle>
+                <Calendar className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  {isLoadingStats ? '...' : stats.activeSocieties}
-                </div>
-                <p className="text-xs text-muted-foreground">Currently active</p>
+                <div className="text-2xl font-bold">{stats.thisYear}</div>
+                <p className="text-xs text-muted-foreground">
+                  {stats.lastYear > 0 ? (
+                    stats.thisYear > stats.lastYear ? 
+                      `+${((stats.thisYear - stats.lastYear) / stats.lastYear * 100).toFixed(1)}% from last year` :
+                      `${((stats.thisYear - stats.lastYear) / stats.lastYear * 100).toFixed(1)}% from last year`
+                  ) : 'Registered in 2025'}
+                </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">This Month</CardTitle>
-                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  {isLoadingStats ? '...' : stats.thisMonth}
-                </div>
+                <div className="text-2xl font-bold">{stats.thisMonth}</div>
                 <p className="text-xs text-muted-foreground">New registrations</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Members</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">Recent</CardTitle>
+                <Clock className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
-                  {isLoadingStats ? '...' : formatLargeNumber(stats.totalMembers)}
-                </div>
-                <p className="text-xs text-muted-foreground">Across all societies</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Exempted</CardTitle>
-                <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {isLoadingStats ? '...' : stats.exemptedSocieties}
-                </div>
-                <p className="text-xs text-muted-foreground">Exempted societies</p>
+                <div className="text-2xl font-bold">{stats.recent}</div>
+                <p className="text-xs text-muted-foreground">Last 30 days</p>
               </CardContent>
             </Card>
           </motion.div>
 
-          {/* Charts and Analytics */}
+          {/* Registration Trend */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6"
+            className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"
           >
             <Card>
               <CardHeader>
-                <CardTitle>Society Types Distribution</CardTitle>
-                <CardDescription>Breakdown by nature of society</CardDescription>
+                <CardTitle className="flex items-center">
+                  <BarChart3 className="w-5 h-5 mr-2" />
+                  5-Year Registration Trend
+                </CardTitle>
+                <CardDescription>Society registrations over the last 5 years</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {stats.societyTypes.length > 0 ? (
-                    stats.societyTypes.map((type, index) => (
-                      <div key={type.type} className="flex items-center justify-between">
-                        <span className="text-sm font-medium">{type.type}</span>
-                        <div className="flex items-center space-x-2">
-                          <div className="w-24 bg-gray-200 rounded-full h-2">
-                            <div 
-                              className={`h-2 rounded-full ${
-                                index === 0 ? 'bg-blue-500' : 
-                                index === 1 ? 'bg-green-500' : 
-                                index === 2 ? 'bg-purple-500' : 
-                                index === 3 ? 'bg-orange-500' : 'bg-gray-500'
-                              }`}
-                              style={{ width: `${type.percentage}%` }}
-                            ></div>
-                          </div>
-                          <span className="text-sm text-gray-600">{type.count} ({type.percentage}%)</span>
+                <div className="space-y-3">
+                  {stats.registrationTrend.map((item, index) => (
+                    <div key={item.year} className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{item.year}</span>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-24 bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-emerald-600 h-2 rounded-full"
+                            style={{ 
+                              width: `${Math.max(10, (item.count / Math.max(...stats.registrationTrend.map(t => t.count))) * 100)}%` 
+                            }}
+                          />
                         </div>
+                        <span className="text-sm text-gray-600 w-8 text-right">{item.count}</span>
                       </div>
-                    ))
-                  ) : (
-                    <div className="text-center text-gray-500 py-4">
-                      {isLoadingStats ? 'Loading society types...' : 'No society type data available'}
                     </div>
-                  )}
+                  ))}
                 </div>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle>Data Sources</CardTitle>
-                <CardDescription>Registration data by source</CardDescription>
+                <CardTitle className="flex items-center">
+                  <FileText className="w-5 h-5 mr-2" />
+                  Top Registration Years
+                </CardTitle>
+                <CardDescription>Years with the most society registrations</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {stats.dataSources.length > 0 ? (
-                    stats.dataSources.map((source, index) => (
-                      <div key={source.source} className="flex items-center justify-between">
-                        <span className="text-sm font-medium capitalize">
-                          {source.source.replace('_', ' ')}
-                        </span>
-                        <div className="flex items-center space-x-2">
-                          <div className="w-20 bg-gray-200 rounded-full h-2">
-                            <div 
-                              className={`h-2 rounded-full ${
-                                index === 0 ? 'bg-indigo-500' : 
-                                index === 1 ? 'bg-pink-500' : 
-                                index === 2 ? 'bg-yellow-500' : 'bg-gray-400'
-                              }`}
-                              style={{ width: `${Math.min(source.percentage * 2, 100)}%` }}
-                            ></div>
-                          </div>
-                          <span className="text-sm text-gray-600">{source.count}</span>
+                <div className="space-y-3">
+                  {stats.yearlyBreakdown.slice(0, 8).map((item, index) => (
+                    <div key={item.year} className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{item.year}</span>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-20 bg-gray-200 rounded-full h-2">
+                          <div 
+                            className="bg-blue-600 h-2 rounded-full"
+                            style={{ 
+                              width: `${Math.max(10, (item.count / Math.max(...stats.yearlyBreakdown.map(t => t.count))) * 100)}%` 
+                            }}
+                          />
                         </div>
+                        <span className="text-sm text-gray-600 w-8 text-right">{item.count}</span>
                       </div>
-                    ))
-                  ) : (
-                    <div className="text-center text-gray-500 py-4">
-                      {isLoadingStats ? 'Loading data sources...' : 'No data source information available'}
                     </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
-                <CardDescription>Latest society registrations</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {stats.recentRegistrations.length > 0 ? (
-                    stats.recentRegistrations.map((society, index) => (
-                      <div key={society.id} className="flex items-center space-x-4">
-                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium truncate">
-                            {society.society_name || 'Unnamed Society'}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {society.nature_of_society || 'Unknown Type'} • {' '}
-                            {society.created_at ? new Date(society.created_at).toLocaleDateString() : 'Unknown Date'}
-                          </p>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center text-gray-500 py-4">
-                      {isLoadingStats ? 'Loading recent activity...' : 'No recent registrations'}
-                    </div>
-                  )}
+                  ))}
                 </div>
               </CardContent>
             </Card>
           </motion.div>
 
-          {/* Performance Metrics */}
+          {/* Summary Cards */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="mt-8"
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
           >
             <Card>
               <CardHeader>
-                <CardTitle>Department Performance</CardTitle>
-                <CardDescription>Key performance indicators and metrics</CardDescription>
+                <CardTitle className="text-lg">Data Quality</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Registration Completion Rate</span>
-                      <span>{stats.totalSocieties > 0 ? ((stats.activeSocieties / stats.totalSocieties) * 100).toFixed(1) : '0'}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-green-500 h-2 rounded-full" style={{ 
-                        width: `${stats.totalSocieties > 0 ? (stats.activeSocieties / stats.totalSocieties) * 100 : 0}%` 
-                      }}></div>
-                    </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm">Complete Records</span>
+                    <span className="text-sm font-medium">
+                      {stats.totalSocieties > 0 ? 
+                        Math.round((stats.totalSocieties / stats.totalSocieties) * 100) : 0}%
+                    </span>
                   </div>
-                  
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Data Quality Score</span>
-                      <span>87.3%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-blue-500 h-2 rounded-full" style={{ width: '87.3%' }}></div>
-                    </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div className="bg-green-600 h-2 rounded-full w-full" />
                   </div>
-                  
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Monthly Growth</span>
-                      <span>+{stats.thisMonth}</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-purple-500 h-2 rounded-full" style={{ width: '65%' }}></div>
-                    </div>
-                  </div>
+                  <p className="text-xs text-gray-500">
+                    All records contain required fields
+                  </p>
                 </div>
+              </CardContent>
+            </Card>
 
-                <div className="mt-6 pt-4 border-t">
-                  <div className="flex items-center space-x-2 text-sm text-gray-600">
-                    <Clock className="h-4 w-4" />
-                    <span>Avg. Processing Time: {stats.avgProcessingTime}</span>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Growth Rate</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="text-2xl font-bold text-emerald-600">
+                    {stats.lastYear > 0 ? 
+                      `${((stats.thisYear - stats.lastYear) / stats.lastYear * 100).toFixed(1)}%` : 
+                      'N/A'
+                    }
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Year-over-year growth in registrations
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">System Status</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                    <span className="text-sm">Database Online</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                    <span className="text-sm">Import System Active</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                    <span className="text-sm">Search Functional</span>
                   </div>
                 </div>
               </CardContent>
