@@ -30,11 +30,6 @@ export default function Home() {
   const { user, isLoading } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
-    if (!isLoading && user?.is_approved) {
-      router.push('/dashboard');
-    }
-  }, [user, isLoading, router]);
 
   if (isLoading) {
     return (
@@ -84,23 +79,33 @@ export default function Home() {
                   </span>
                 </h1>
                 <h2 className="text-xl lg:text-2xl text-gray-700 font-medium">
-                  Digital Records Management System
+                  Public Records & Government Services
                 </h2>
               </div>
               
               <p className="text-lg text-gray-600 leading-relaxed max-w-lg">
-                Streamline operations across Office of the Attorney General departments with secure, centralized data management. 
-                Built for OAG cross-departmental collaboration, comprehensive audit trails, and regulatory compliance.
+                Access public registries to search and verify official records, or manage internal departmental operations. 
+                Serving both public information needs and government administrative functions.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button
-                  onClick={() => router.push('/auth')}
+                  onClick={() => router.push('/registries')}
                   size="lg"
-                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-4 rounded-xl shadow-lg transform hover:scale-105 transition-all duration-200 text-lg"
+                  className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-8 py-4 rounded-xl shadow-lg transform hover:scale-105 transition-all duration-200 text-lg font-semibold"
                 >
-                  Access System
+                  <Search className="mr-2 h-5 w-5" />
+                  Search Public Records
                   <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+                <Button
+                  onClick={() => router.push('/auth')}
+                  variant="outline"
+                  size="lg"
+                  className="border-2 border-gray-300 hover:border-blue-400 text-gray-700 hover:text-blue-600 px-6 py-4 rounded-xl transition-all duration-200 text-base"
+                >
+                  <Lock className="mr-2 h-4 w-4" />
+                  Staff Portal
                 </Button>
               </div>
             </motion.div>
@@ -115,7 +120,7 @@ export default function Home() {
               <div className="relative bg-white rounded-2xl shadow-2xl border border-gray-200 p-8">
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-gray-900">OAG Data Portal</h3>
+                    <h3 className="text-lg font-semibold text-gray-900">Public Records Portal</h3>
                     <div className="flex space-x-2">
                       <div className="w-3 h-3 bg-red-400 rounded-full"></div>
                       <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
@@ -124,28 +129,28 @@ export default function Home() {
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-blue-50 rounded-lg p-4">
-                      <div className="text-2xl font-bold text-blue-700">Multi-Dept</div>
-                      <div className="text-sm text-blue-600">Data Access</div>
-                    </div>
                     <div className="bg-green-50 rounded-lg p-4">
-                      <div className="text-2xl font-bold text-green-700">Secure</div>
-                      <div className="text-sm text-green-600">Audit Trails</div>
+                      <div className="text-2xl font-bold text-green-700">34,000+</div>
+                      <div className="text-sm text-green-600">Public Records</div>
+                    </div>
+                    <div className="bg-blue-50 rounded-lg p-4">
+                      <div className="text-2xl font-bold text-blue-700">5</div>
+                      <div className="text-sm text-blue-600">Registries</div>
                     </div>
                   </div>
                   
                   <div className="space-y-3">
                     <div className="flex items-center space-x-3">
                       <CheckCircle className="w-5 h-5 text-green-500" />
-                      <span className="text-sm text-gray-600">Cross-departmental collaboration</span>
+                      <span className="text-sm text-gray-600">Marriage certificate verification</span>
                     </div>
                     <div className="flex items-center space-x-3">
                       <CheckCircle className="w-5 h-5 text-green-500" />
-                      <span className="text-sm text-gray-600">Who changed what tracking</span>
+                      <span className="text-sm text-gray-600">Court cases & legal records</span>
                     </div>
                     <div className="flex items-center space-x-3">
                       <CheckCircle className="w-5 h-5 text-green-500" />
-                      <span className="text-sm text-gray-600">Advanced search & filters</span>
+                      <span className="text-sm text-gray-600">24/7 public access</span>
                     </div>
                   </div>
                 </div>
@@ -165,50 +170,50 @@ export default function Home() {
             className="text-center mb-16"
           >
             <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-              Empowering OAG Departments
+              Public Access & Government Services
             </h2>
             <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-              Transform how Office of the Attorney General departments manage, access, and collaborate on critical data across the organization, 
-              ensuring efficiency, transparency, and compliance with legal and regulatory standards.
+              Providing transparent public access to government records while empowering OAG departments with secure, 
+              efficient data management tools for internal operations and cross-departmental collaboration.
             </p>
           </motion.div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[
               {
-                icon: Users,
-                title: 'OAG Cross-Department Collaboration',
-                description: 'Enable seamless collaboration between Attorney General departments while maintaining secure access controls and data boundaries for each unit.',
+                icon: Heart,
+                title: 'Marriage Records Verification',
+                description: 'Instantly verify marriage certificates and check validity of registered marriages. Public access to certificate verification with privacy protection.',
+                color: 'pink',
+              },
+              {
+                icon: Scale,
+                title: 'Court Cases & Legal Records',
+                description: 'Search public court cases and legal proceedings involving government entities. Access case details, documents, and status tracking.',
                 color: 'blue',
               },
               {
-                icon: Database,
-                title: 'Unified Data Management',
-                description: 'Centralize all OAG departmental data in one secure platform, eliminating information silos and ensuring consistency across the Attorney General office.',
-                color: 'purple',
-              },
-              {
-                icon: FileSearch,
-                title: 'Intelligent Search Engine',
-                description: 'Find any record instantly with progressive search across all data fields, with department-specific filtering and advanced query capabilities.',
+                icon: Building2,
+                title: 'Societies & Organizations',
+                description: 'Find registered societies, organizations, and community groups. Check registration status, contact information, and compliance records.',
                 color: 'green',
               },
               {
-                icon: BarChart3,
-                title: 'Comprehensive Analytics',
-                description: 'Generate insights with real-time analytics on OAG departmental performance, data quality metrics, and operational efficiency across all Attorney General units.',
-                color: 'orange',
+                icon: Users,
+                title: 'Public Trustees Registry',
+                description: 'Search deceased estates and public trustee records by limited criteria. Access PT cause numbers, folio numbers, and deceased information.',
+                color: 'purple',
               },
               {
                 icon: Lock,
-                title: 'Complete Audit Trail',
-                description: 'Track who changed what, when, and why with detailed audit logs. Every action is recorded for legal compliance, accountability, and security within the OAG.',
+                title: 'Staff Data Management',
+                description: 'Secure internal portal for OAG staff to manage departmental data, collaborate across units, and maintain comprehensive audit trails.',
                 color: 'red',
               },
               {
-                icon: Clock,
-                title: 'Real-Time Operations',
-                description: 'Enable OAG departments to work in real-time with instant updates, notifications, and synchronization across all connected systems.',
+                icon: Shield,
+                title: 'Privacy & Security',
+                description: 'All public searches comply with data protection regulations. Internal operations feature role-based access and complete audit logging.',
                 color: 'indigo',
               },
             ].map((feature, index) => (
@@ -244,19 +249,19 @@ export default function Home() {
             className="text-center mb-12"
           >
             <h2 className="text-3xl lg:text-4xl font-bold text-white mb-4">
-              Trusted by OAG Departments
+              Serving the Public & Government
             </h2>
             <p className="text-xl text-blue-100 max-w-2xl mx-auto">
-              Supporting efficient Attorney General operations through secure, scalable data management
+              Providing transparent public access to government records while supporting efficient internal operations
             </p>
           </motion.div>
 
           <div className="grid md:grid-cols-4 gap-8">
             {[
-              { number: 'Multi-Dept', label: 'Data Integration', icon: Database },
-              { number: 'OAG Depts', label: 'Collaboration', icon: Building2 },
+              { number: '34,000+', label: 'Public Records', icon: Database },
+              { number: '5', label: 'Active Registries', icon: Building2 },
               { number: '99.9%', label: 'System Uptime', icon: TrendingUp },
-              { number: '24/7', label: 'Secure Access', icon: Globe },
+              { number: '24/7', label: 'Public Access', icon: Globe },
             ].map((stat, index) => (
               <motion.div
                 key={stat.label}
@@ -397,6 +402,67 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Staff Portal Section */}
+      <div className="py-20 bg-gradient-to-br from-gray-900 to-slate-800">
+        <div className="container mx-auto px-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            className="text-center max-w-4xl mx-auto"
+          >
+            <div className="flex items-center justify-center mb-6">
+              <Lock className="w-8 h-8 text-blue-400 mr-3" />
+              <h2 className="text-3xl lg:text-4xl font-bold text-white">
+                OAG Staff Portal
+              </h2>
+            </div>
+            <p className="text-lg text-gray-300 mb-8 leading-relaxed">
+              Secure internal portal for Office of the Attorney General staff. Access departmental data management, 
+              cross-departmental collaboration tools, and comprehensive audit systems.
+            </p>
+            
+            <div className="grid md:grid-cols-3 gap-8 mb-8">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-blue-600 rounded-lg flex items-center justify-center mx-auto mb-4">
+                  <Database className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-semibold text-white mb-2">Data Management</h3>
+                <p className="text-gray-400 text-sm">Secure access to departmental records and administrative functions</p>
+              </div>
+              <div className="text-center">
+                <div className="w-16 h-16 bg-purple-600 rounded-lg flex items-center justify-center mx-auto mb-4">
+                  <Users className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-semibold text-white mb-2">Collaboration</h3>
+                <p className="text-gray-400 text-sm">Cross-departmental workflows and team coordination tools</p>
+              </div>
+              <div className="text-center">
+                <div className="w-16 h-16 bg-red-600 rounded-lg flex items-center justify-center mx-auto mb-4">
+                  <Shield className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-semibold text-white mb-2">Security & Audit</h3>
+                <p className="text-gray-400 text-sm">Complete audit trails and role-based access controls</p>
+              </div>
+            </div>
+            
+            <Button
+              onClick={() => router.push('/auth')}
+              size="lg"
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-4 rounded-xl shadow-lg transition-all duration-200 text-lg"
+            >
+              <Lock className="mr-2 h-5 w-5" />
+              Staff Login
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+
+            <div className="mt-6 text-sm text-gray-500">
+              Restricted Access • Role-Based Security • Audit Logged • Admin Approval Required
+            </div>
+          </motion.div>
+        </div>
+      </div>
+
       {/* CTA Section */}
       <div className="py-20 bg-gray-50">
         <div className="container mx-auto px-4">
@@ -407,26 +473,36 @@ export default function Home() {
             className="text-center max-w-4xl mx-auto"
           >
             <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-6">
-              Ready to Transform Your Department's Operations?
+              Access Public Records or Staff Portal
             </h2>
             <p className="text-lg text-gray-600 mb-8 leading-relaxed">
-              Join the digital transformation of Attorney General services. Access secure, efficient, 
-              and compliant data management designed for modern OAG inter-departmental operations.
+              Search and verify public records 24/7, or access the secure staff portal for internal 
+              departmental operations and data management across the Attorney General's office.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button
-                onClick={() => router.push('/auth')}
+                onClick={() => router.push('/registries')}
                 size="lg"
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-8 py-4 rounded-xl shadow-lg transform hover:scale-105 transition-all duration-200 text-lg"
+                className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-8 py-4 rounded-xl shadow-lg transform hover:scale-105 transition-all duration-200 text-lg font-semibold"
               >
-                Access Portal
+                <Search className="mr-2 h-5 w-5" />
+                Search Public Records
                 <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+              <Button
+                onClick={() => router.push('/auth')}
+                variant="outline"
+                size="lg"
+                className="border-2 border-blue-300 hover:border-blue-500 text-blue-600 hover:text-blue-700 px-6 py-4 rounded-xl transition-all duration-200"
+              >
+                <Lock className="mr-2 h-4 w-4" />
+                Staff Portal
               </Button>
             </div>
 
             <div className="mt-8 text-sm text-gray-500">
-              Secure • Compliant • Government-Grade • 24/7 Support
+              Public Access • Privacy Protected • Government-Grade Security • 24/7 Available
             </div>
           </motion.div>
         </div>
