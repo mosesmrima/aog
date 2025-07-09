@@ -162,7 +162,7 @@ export function Sidebar() {
             return (
               <div key={item.name}>
                 <Link
-                  href={`${item.href}/dashboard`}
+                  href={item.name === 'Public Trustees' ? item.href : `${item.href}/dashboard`}
                   onClick={() => setIsMobileMenuOpen(false)}
                   className={cn(
                     'flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors duration-200 group',
@@ -185,18 +185,34 @@ export function Sidebar() {
                 {/* Sub-navigation for active department */}
                 {isActive && (
                   <div className="ml-8 mt-1 space-y-1">
-                    <Link
-                      href={`${item.href}/dashboard`}
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className={cn(
-                        'block px-3 py-1 rounded text-sm transition-colors duration-200',
-                        pathname === `${item.href}/dashboard`
-                          ? 'bg-blue-100 text-blue-700 font-medium'
-                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                      )}
-                    >
-                      Dashboard
-                    </Link>
+                    {item.name !== 'Public Trustees' && (
+                      <Link
+                        href={`${item.href}/dashboard`}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className={cn(
+                          'block px-3 py-1 rounded text-sm transition-colors duration-200',
+                          pathname === `${item.href}/dashboard`
+                            ? 'bg-blue-100 text-blue-700 font-medium'
+                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                        )}
+                      >
+                        Dashboard
+                      </Link>
+                    )}
+                    {item.name === 'Public Trustees' && (
+                      <Link
+                        href={item.href}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className={cn(
+                          'block px-3 py-1 rounded text-sm transition-colors duration-200',
+                          pathname === item.href
+                            ? 'bg-blue-100 text-blue-700 font-medium'
+                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                        )}
+                      >
+                        Overview
+                      </Link>
+                    )}
                     <Link
                       href={`${item.href}/manage`}
                       onClick={() => setIsMobileMenuOpen(false)}

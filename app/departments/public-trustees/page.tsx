@@ -51,18 +51,6 @@ export default function PublicTrusteesDepartmentPage() {
 
   const [isLoadingStats, setIsLoadingStats] = useState(true);
 
-  useEffect(() => {
-    if (!isLoading) {
-      if (!user) {
-        router.push('/auth');
-      } else if (!user.is_approved) {
-        router.push('/pending');
-      } else {
-        loadStats();
-      }
-    }
-  }, [user, isLoading, router, loadStats]);
-
   const loadStats = useCallback(async () => {
     try {
       setIsLoadingStats(true);
@@ -134,6 +122,18 @@ export default function PublicTrusteesDepartmentPage() {
       setIsLoadingStats(false);
     }
   }, [toast]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      if (!user) {
+        router.push('/auth');
+      } else if (!user.is_approved) {
+        router.push('/pending');
+      } else {
+        loadStats();
+      }
+    }
+  }, [user, isLoading, router, loadStats]);
 
   const quickActions = [
     {
