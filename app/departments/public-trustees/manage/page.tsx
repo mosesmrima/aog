@@ -111,23 +111,6 @@ export default function PublicTrusteesManagePage() {
   // Import dialog state
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
-  useEffect(() => {
-    if (!isLoading) {
-      if (!user) {
-        router.push('/auth');
-      } else if (!user.is_approved) {
-        router.push('/pending');
-      }
-    }
-  }, [user, isLoading, router]);
-
-  useEffect(() => {
-    if (user?.is_approved) {
-      loadTrustees();
-      loadFilterOptions();
-    }
-  }, [user, loadTrustees, loadFilterOptions]);
-
   const loadTrustees = useCallback(async () => {
     try {
       setIsLoadingTrustees(true);
@@ -215,6 +198,23 @@ export default function PublicTrusteesManagePage() {
       console.error('Error loading filter options:', error);
     }
   }, []);
+
+  useEffect(() => {
+    if (!isLoading) {
+      if (!user) {
+        router.push('/auth');
+      } else if (!user.is_approved) {
+        router.push('/pending');
+      }
+    }
+  }, [user, isLoading, router]);
+
+  useEffect(() => {
+    if (user?.is_approved) {
+      loadTrustees();
+      loadFilterOptions();
+    }
+  }, [user, loadTrustees, loadFilterOptions]);
 
   const handleImportComplete = () => {
     // Reload trustees data after successful import
