@@ -85,7 +85,7 @@ export class SocietiesCSVImporter {
   }
 
   private parseCSV(csvText: string): SocietyRecord[] {
-    const lines = csvText.trim().split('\n');
+    const lines = csvText.trim().split(/\r?\n/);
     
     if (lines.length < 2) {
       throw new Error('CSV must have at least a header row and one data row');
