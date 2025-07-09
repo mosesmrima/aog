@@ -384,19 +384,12 @@ export default function Home() {
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Button
-                  onClick={() => router.push('/registries/search')}
+                  onClick={() => router.push('/registries/')}
                   variant="outline"
                   className="border-blue-200 text-blue-600 hover:bg-blue-50"
                 >
                   Start Searching
                   <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-                <Button
-                  onClick={() => router.push('/registries/help')}
-                  variant="outline"
-                  className="border-gray-200 text-gray-600 hover:bg-gray-50"
-                >
-                  Get Help
                 </Button>
               </div>
             </div>
