@@ -70,6 +70,7 @@ export default function SocietiesPage() {
   const [selectedYear, setSelectedYear] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalSocieties, setTotalSocieties] = useState(0);
+  const [filteredCount, setFilteredCount] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [selectedSociety, setSelectedSociety] = useState<Society | null>(null);
   const [sortField, setSortField] = useState<string>('created_at');
@@ -101,6 +102,12 @@ export default function SocietiesPage() {
     try {
       setIsLoadingSocieties(true);
       
+      // First, get the total count of all societies (no filters)
+      const { count: totalCount } = await supabase
+        .from('societies')
+        .select('*', { count: 'exact', head: true });
+      
+      // Then get filtered and paginated results
       let query = supabase
         .from('societies')
         .select('*', { count: 'exact' })
@@ -123,13 +130,14 @@ export default function SocietiesPage() {
       const to = from + ITEMS_PER_PAGE - 1;
       query = query.range(from, to);
 
-      const { data, error, count } = await query;
+      const { data, error, count: filteredCount } = await query;
 
       if (error) throw error;
 
       setSocieties(data || []);
-      setTotalSocieties(count || 0);
-      setTotalPages(Math.ceil((count || 0) / ITEMS_PER_PAGE));
+      setTotalSocieties(totalCount || 0);
+      setFilteredCount(filteredCount || 0);
+      setTotalPages(Math.ceil((filteredCount || 0) / ITEMS_PER_PAGE));
     } catch (error) {
       console.error('Error loading societies:', error);
     } finally {
@@ -382,9 +390,13 @@ export default function SocietiesPage() {
           {/* Societies Table */}
           <Card>
             <CardHeader>
-              <CardTitle>Societies Registry ({totalSocieties} total)</CardTitle>
+              <CardTitle>Societies Registry ({totalSocieties.toLocaleString()} total)</CardTitle>
               <CardDescription>
-                Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, totalSocieties)} of {totalSocieties} societies
+                {searchTerm || selectedYear !== 'all' ? (
+                  `Showing ${((currentPage - 1) * ITEMS_PER_PAGE) + 1}-${Math.min(currentPage * ITEMS_PER_PAGE, filteredCount)} of ${filteredCount.toLocaleString()} filtered results (${totalSocieties.toLocaleString()} total societies)`
+                ) : (
+                  `Showing ${((currentPage - 1) * ITEMS_PER_PAGE) + 1}-${Math.min(currentPage * ITEMS_PER_PAGE, totalSocieties)} of ${totalSocieties.toLocaleString()} societies`
+                )}
               </CardDescription>
             </CardHeader>
             <CardContent>

@@ -21,7 +21,6 @@ interface RegistryInfo {
   id: string;
   name: string;
   description: string;
-  recordCount: number;
   icon: React.ElementType;
   route: string;
   accessLevel: 'verification' | 'full' | 'limited';
@@ -34,7 +33,6 @@ const registries: RegistryInfo[] = [
     id: 'marriages',
     name: 'Marriage Records',
     description: 'Verify marriage certificates and check validity of registered marriages',
-    recordCount: 3356,
     icon: Heart,
     route: '/registries/marriages',
     accessLevel: 'verification',
@@ -45,7 +43,6 @@ const registries: RegistryInfo[] = [
     id: 'public-cases',
     name: 'Public Cases Against Government',
     description: 'Search public court cases and legal proceedings involving government entities',
-    recordCount: 1243,
     icon: Scale,
     route: '/registries/public-cases',
     accessLevel: 'full',
@@ -56,7 +53,6 @@ const registries: RegistryInfo[] = [
     id: 'societies',
     name: 'Societies Registry',
     description: 'Find registered societies, organizations and community groups',
-    recordCount: 892,
     icon: Building2,
     route: '/registries/societies',
     accessLevel: 'full',
@@ -67,7 +63,6 @@ const registries: RegistryInfo[] = [
     id: 'public-trustees',
     name: 'Public Trustees Registry',
     description: 'Search deceased estates and public trustee records by limited criteria',
-    recordCount: 29006,
     icon: Scale,
     route: '/registries/public-trustees',
     accessLevel: 'limited',
@@ -78,7 +73,6 @@ const registries: RegistryInfo[] = [
     id: 'adoptions',
     name: 'Adoptions Registry',
     description: 'Limited public information about adoption processes and statistics',
-    recordCount: 156,
     icon: Users,
     route: '/registries/adoptions',
     accessLevel: 'limited',
@@ -133,12 +127,6 @@ export default function RegistriesPage() {
             </p>
             
             <div className="flex flex-col sm:flex-row items-center justify-center mt-8 space-y-4 sm:space-y-0 sm:space-x-8">
-              <div className="text-center">
-                <div className="text-2xl sm:text-3xl font-bold text-white">
-                  {registries.reduce((sum, reg) => sum + reg.recordCount, 0).toLocaleString()}
-                </div>
-                <div className="text-blue-200 text-xs sm:text-sm">Total Records</div>
-              </div>
               <div className="text-center">
                 <div className="text-2xl sm:text-3xl font-bold text-white">{registries.length}</div>
                 <div className="text-blue-200 text-xs sm:text-sm">Active Registries</div>
@@ -200,16 +188,6 @@ export default function RegistriesPage() {
                   
                   <CardContent className="pt-0">
                     <div className="space-y-4">
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div className="flex items-center space-x-2">
-                          <TrendingUp className="w-4 h-4 text-gray-500" />
-                          <span className="text-sm font-medium text-gray-700">Total Records</span>
-                        </div>
-                        <span className="text-lg font-bold text-gray-900">
-                          {registry.recordCount.toLocaleString()}
-                        </span>
-                      </div>
-                      
                       <div className="space-y-2">
                         <h4 className="text-sm font-medium text-gray-700">Available Features:</h4>
                         <div className="flex flex-wrap gap-2">
