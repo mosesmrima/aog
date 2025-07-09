@@ -58,6 +58,13 @@ const departmentNavigation = [
     fullName: 'Registrar of Societies'
   },
   {
+    name: 'Public Trustees',
+    href: '/departments/public-trustees',
+    icon: Scale,
+    description: 'Deceased estates and public trustee records',
+    fullName: 'Public Trustees'
+  },
+  {
     name: 'Administration',
     href: '/departments/administration',
     icon: Settings,

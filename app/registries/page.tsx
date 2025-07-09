@@ -64,6 +64,17 @@ const registries: RegistryInfo[] = [
     features: ['Registration Details', 'Organization Status', 'Contact Information']
   },
   {
+    id: 'public-trustees',
+    name: 'Public Trustees Registry',
+    description: 'Search deceased estates and public trustee records by limited criteria',
+    recordCount: 29006,
+    icon: Scale,
+    route: '/registries/public-trustees',
+    accessLevel: 'limited',
+    color: 'from-indigo-500 to-purple-600',
+    features: ['PT Cause No Search', 'Folio No Search', 'Deceased Name Search']
+  },
+  {
     id: 'adoptions',
     name: 'Adoptions Registry',
     description: 'Limited public information about adoption processes and statistics',

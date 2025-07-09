@@ -266,6 +266,147 @@ export type Database = {
           created_at?: string;
         };
       };
+      public_trustees: {
+        Row: {
+          id: string;
+          pt_cause_no: string | null;
+          folio_no: string | null;
+          deceased_name: string | null;
+          gender: string | null;
+          marital_status: string | null;
+          date_of_death: string | null;
+          religion: string | null;
+          county: string | null;
+          station: string | null;
+          assets: string | null;
+          beneficiaries: string | null;
+          telephone_no: string | null;
+          date_of_advertisement: string | null;
+          date_of_confirmation: string | null;
+          date_account_drawn: string | null;
+          date_payment_made: string | null;
+          file_year: number | null;
+          original_file_name: string | null;
+          data_source: string | null;
+          data_quality_score: number;
+          missing_fields: string[];
+          import_warnings: any;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          pt_cause_no?: string | null;
+          folio_no?: string | null;
+          deceased_name?: string | null;
+          gender?: string | null;
+          marital_status?: string | null;
+          date_of_death?: string | null;
+          religion?: string | null;
+          county?: string | null;
+          station?: string | null;
+          assets?: string | null;
+          beneficiaries?: string | null;
+          telephone_no?: string | null;
+          date_of_advertisement?: string | null;
+          date_of_confirmation?: string | null;
+          date_account_drawn?: string | null;
+          date_payment_made?: string | null;
+          file_year?: number | null;
+          original_file_name?: string | null;
+          data_source?: string | null;
+          data_quality_score?: number;
+          missing_fields?: string[];
+          import_warnings?: any;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          pt_cause_no?: string | null;
+          folio_no?: string | null;
+          deceased_name?: string | null;
+          gender?: string | null;
+          marital_status?: string | null;
+          date_of_death?: string | null;
+          religion?: string | null;
+          county?: string | null;
+          station?: string | null;
+          assets?: string | null;
+          beneficiaries?: string | null;
+          telephone_no?: string | null;
+          date_of_advertisement?: string | null;
+          date_of_confirmation?: string | null;
+          date_account_drawn?: string | null;
+          date_payment_made?: string | null;
+          file_year?: number | null;
+          original_file_name?: string | null;
+          data_source?: string | null;
+          data_quality_score?: number;
+          missing_fields?: string[];
+          import_warnings?: any;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      public_trustees_audit: {
+        Row: {
+          id: string;
+          trustees_id: string | null;
+          action: string;
+          old_values: any | null;
+          new_values: any | null;
+          changed_by: string | null;
+          changed_at: string;
+        };
+        Insert: {
+          id?: string;
+          trustees_id?: string | null;
+          action: string;
+          old_values?: any | null;
+          new_values?: any | null;
+          changed_by?: string | null;
+          changed_at?: string;
+        };
+        Update: {
+          id?: string;
+          trustees_id?: string | null;
+          action?: string;
+          old_values?: any | null;
+          new_values?: any | null;
+          changed_by?: string | null;
+          changed_at?: string;
+        };
+      };
+    };
+    Views: {
+      public_trustees_stats: {
+        Row: {
+          total_trustees: number;
+          male_count: number;
+          female_count: number;
+          married_count: number;
+          single_count: number;
+          recent_deaths: number;
+          avg_quality_score: number;
+          earliest_year: number;
+          latest_year: number;
+          unique_counties: number;
+          unique_stations: number;
+        };
+      };
+    };
+    Functions: {
+      [_ in never]: never;
+    };
+    Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
     };
   };
 };
