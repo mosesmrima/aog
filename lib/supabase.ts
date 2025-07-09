@@ -172,54 +172,26 @@ export type Database = {
       societies: {
         Row: {
           id: string;
-          registration_number: string | null;
-          society_name: string | null;
+          registered_name: string | null;
           registration_date: string | null;
-          registry_office: string | null;
-          address: string | null;
-          nature_of_society: string | null;
-          member_class: string | null;
-          member_count: number | null;
-          chairman_name: string | null;
-          secretary_name: string | null;
-          treasurer_name: string | null;
-          registration_status: string | null;
-          data_source: string | null;
+          registration_number: string | null;
           created_at: string;
+          updated_at: string;
         };
         Insert: {
           id?: string;
-          registration_number?: string | null;
-          society_name?: string | null;
+          registered_name?: string | null;
           registration_date?: string | null;
-          registry_office?: string | null;
-          address?: string | null;
-          nature_of_society?: string | null;
-          member_class?: string | null;
-          member_count?: number | null;
-          chairman_name?: string | null;
-          secretary_name?: string | null;
-          treasurer_name?: string | null;
-          registration_status?: string | null;
-          data_source?: string | null;
+          registration_number?: string | null;
           created_at?: string;
+          updated_at?: string;
         };
         Update: {
           id?: string;
-          registration_number?: string | null;
-          society_name?: string | null;
+          registered_name?: string | null;
           registration_date?: string | null;
-          registry_office?: string | null;
-          address?: string | null;
-          nature_of_society?: string | null;
-          member_class?: string | null;
-          member_count?: number | null;
-          chairman_name?: string | null;
-          secretary_name?: string | null;
-          treasurer_name?: string | null;
-          registration_status?: string | null;
-          data_source?: string | null;
-          created_at?: string;
+          registration_number?: string | null;
+          updated_at?: string;
         };
       };
       government_cases: {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -9,19 +9,13 @@ import {
   Search, 
   ArrowLeft,
   Calendar,
-  MapPin,
-  Phone,
-  Mail,
-  User,
-  TrendingUp,
+  FileText,
   Eye,
   CheckCircle,
   Filter,
   Download,
   BarChart3,
-  Users,
-  FileText,
-  Building,
+  TrendingUp,
   Globe
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,8 +23,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
 import { 
   Dialog,
   DialogContent,
@@ -39,24 +31,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { supabase } from '@/lib/supabase';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface Society {
   id: string;
-  registration_number: string | null;
-  society_name: string | null;
+  registered_name: string | null;
   registration_date: string | null;
-  registry_office: string | null;
-  address: string | null;
-  nature_of_society: string | null;
-  member_class: string | null;
-  member_count: number | null;
-  chairman_name: string | null;
-  secretary_name: string | null;
-  treasurer_name: string | null;
-  registration_status: string | null;
-  data_source: string | null;
+  registration_number: string | null;
   created_at: string;
+  updated_at: string;
 }
 
 export default function SocietiesRegistryPage() {
@@ -65,337 +47,198 @@ export default function SocietiesRegistryPage() {
   const [filteredSocieties, setFilteredSocieties] = useState<Society[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [selectedSociety, setSelectedSociety] = useState<Society | null>(null);
   const [showSocietyDetails, setShowSocietyDetails] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(20);
   
   // Filter states
-  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
-  const [selectedNatures, setSelectedNatures] = useState<string[]>([]);
-  const [selectedOffices, setSelectedOffices] = useState<string[]>([]);
-  const [selectedDataSources, setSelectedDataSources] = useState<string[]>([]);
-  const [selectedYears, setSelectedYears] = useState<string[]>([]);
+  const [selectedYear, setSelectedYear] = useState<string>('all');
+  const [yearRange, setYearRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
   
   // Statistics
   const [stats, setStats] = useState({
     totalSocieties: 0,
-    activeSocieties: 0,
-    totalMembers: 0,
     thisYear: 0,
-    avgMemberCount: 0,
-    topRegistry: 'N/A'
+    lastYear: 0,
+    recent: 0
   });
+
+  // Debounced search
+  const debouncedSearch = useCallback(
+    debounce((query: string) => {
+      if (query.trim()) {
+        loadFilteredSocieties(query);
+      } else {
+        setFilteredSocieties(societies);
+      }
+    }, 300),
+    [societies]
+  );
 
   useEffect(() => {
     loadSocieties();
   }, []);
 
   useEffect(() => {
-    // Debounce search and filters to avoid too many API calls
-    const timeoutId = setTimeout(() => {
-      if (searchQuery || selectedStatuses.length > 0 || selectedNatures.length > 0 || 
-          selectedOffices.length > 0 || selectedDataSources.length > 0 || selectedYears.length > 0) {
-        loadFilteredSocieties();
-      } else {
-        setFilteredSocieties(societies);
-      }
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
-  }, [searchQuery, selectedStatuses, selectedNatures, selectedOffices, selectedDataSources, selectedYears]);
+    debouncedSearch(searchQuery);
+  }, [searchQuery, debouncedSearch]);
 
   useEffect(() => {
-    // Update filtered results when base societies data changes
-    if (!searchQuery && selectedStatuses.length === 0 && selectedNatures.length === 0 && 
-        selectedOffices.length === 0 && selectedDataSources.length === 0 && selectedYears.length === 0) {
-      setFilteredSocieties(societies);
+    if (!searchQuery) {
+      applyFilters();
     }
-  }, [societies, searchQuery, selectedStatuses, selectedNatures, selectedOffices, selectedDataSources, selectedYears]);
+  }, [selectedYear, yearRange, societies]);
 
   const loadSocieties = async () => {
     try {
       setIsLoading(true);
       setError(null);
       
-      // Load societies with pagination for better performance
-      const { data, error, count } = await supabase
+      const { data, error } = await supabase
         .from('societies')
         .select(`
           id,
-          registration_number,
-          society_name,
+          registered_name,
           registration_date,
-          registry_office,
-          address,
-          nature_of_society,
-          member_class,
-          member_count,
-          chairman_name,
-          secretary_name,
-          treasurer_name,
-          registration_status,
-          data_source,
-          created_at
-        `, { count: 'exact' })
+          registration_number,
+          created_at,
+          updated_at
+        `)
         .order('created_at', { ascending: false })
-        .limit(500); // Load first 500 records
+        .limit(1000);
 
       if (error) {
-        console.error('Database error:', error);
         throw new Error(`Failed to load societies: ${error.message}`);
       }
       
       const societiesData = data || [];
       setSocieties(societiesData);
+      setFilteredSocieties(societiesData);
       
-      // Load statistics from database for accuracy
-      await loadStatistics();
+      // Calculate statistics
+      const totalSocieties = societiesData.length;
+      const currentYear = new Date().getFullYear();
+      const thisYear = societiesData.filter(s => 
+        s.registration_date && 
+        new Date(s.registration_date).getFullYear() === currentYear
+      ).length;
+      
+      const lastYear = societiesData.filter(s => 
+        s.registration_date && 
+        new Date(s.registration_date).getFullYear() === currentYear - 1
+      ).length;
+      
+      const recent = societiesData.filter(s => 
+        s.created_at && 
+        new Date(s.created_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+      ).length;
+
+      setStats({
+        totalSocieties,
+        thisYear,
+        lastYear,
+        recent
+      });
       
     } catch (error) {
       console.error('Error loading societies:', error);
       setError(error instanceof Error ? error.message : 'Failed to load societies data');
-      // Set empty state to show user there's an issue
       setSocieties([]);
-      setStats({
-        totalSocieties: 0,
-        activeSocieties: 0,
-        totalMembers: 0,
-        thisYear: 0,
-        avgMemberCount: 0,
-        topRegistry: 'Error loading data'
-      });
+      setFilteredSocieties([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const loadStatistics = async () => {
+  const loadFilteredSocieties = async (query: string) => {
     try {
-      // Get total counts and statistics directly from database
-      const { data: statsData, error } = await supabase
-        .rpc('get_societies_statistics');
-        
-      if (error) {
-        // Fallback to manual calculation if RPC doesn't exist
-        const { data: countData } = await supabase
-          .from('societies')
-          .select('member_count, registration_date, nature_of_society, registry_office', { count: 'exact' });
-          
-        if (countData) {
-          const totalSocieties = countData.length;
-          
-          // Since registration_status is always null, use data completeness as "active" metric
-          const activeSocieties = countData.filter(s => 
-            s.nature_of_society && s.registry_office
-          ).length;
-          
-          const totalMembers = countData.reduce((sum, society) => {
-            return sum + (society.member_count || 0);
-          }, 0);
-          
-          const currentYear = new Date().getFullYear();
-          const thisYear = countData.filter(s => 
-            s.registration_date && 
-            new Date(s.registration_date).getFullYear() === currentYear
-          ).length;
-          
-          const avgMemberCount = countData.length > 0 
-            ? Math.round(totalMembers / countData.length) 
-            : 0;
-          
-          // Get top registry office
-          const registryCount = countData.reduce((acc, society) => {
-            if (society.registry_office) {
-              acc[society.registry_office] = (acc[society.registry_office] || 0) + 1;
-            }
-            return acc;
-          }, {} as Record<string, number>);
-          
-          const topRegistry = Object.entries(registryCount)
-            .sort(([,a], [,b]) => b - a)[0]?.[0] || 'NAIROBI';
-          
-          setStats({
-            totalSocieties: 40318, // Use known total
-            activeSocieties,
-            totalMembers,
-            thisYear,
-            avgMemberCount,
-            topRegistry
-          });
-        }
-      } else {
-        setStats(statsData[0] || {
-          totalSocieties: 0,
-          activeSocieties: 0,
-          totalMembers: 0,
-          thisYear: 0,
-          avgMemberCount: 0,
-          topRegistry: 'N/A'
-        });
-      }
-    } catch (error) {
-      console.error('Error loading statistics:', error);
-    }
-  };
-
-  const loadFilteredSocieties = async () => {
-    try {
-      let query = supabase
+      let supabaseQuery = supabase
         .from('societies')
         .select(`
           id,
-          registration_number,
-          society_name,
+          registered_name,
           registration_date,
-          registry_office,
-          address,
-          nature_of_society,
-          member_class,
-          member_count,
-          chairman_name,
-          secretary_name,
-          treasurer_name,
-          registration_status,
-          data_source,
-          created_at
+          registration_number,
+          created_at,
+          updated_at
         `)
         .order('created_at', { ascending: false })
-        .limit(1000); // Increase limit for search results
+        .limit(1000);
 
-      // Apply text search
-      if (searchQuery.trim()) {
-        const searchTerm = searchQuery.trim();
-        query = query.or(`society_name.ilike.%${searchTerm}%,registration_number.ilike.%${searchTerm}%,nature_of_society.ilike.%${searchTerm}%,registry_office.ilike.%${searchTerm}%,chairman_name.ilike.%${searchTerm}%`);
+      // Apply fuzzy search
+      if (query.trim()) {
+        const searchTerm = query.trim();
+        supabaseQuery = supabaseQuery.or(`registered_name.ilike.%${searchTerm}%,registration_number.ilike.%${searchTerm}%`);
       }
 
-      // Apply nature filter
-      if (selectedNatures.length > 0) {
-        query = query.in('nature_of_society', selectedNatures);
-      }
-
-      // Apply office filter
-      if (selectedOffices.length > 0) {
-        query = query.in('registry_office', selectedOffices);
-      }
-
-      // Apply data source filter
-      if (selectedDataSources.length > 0) {
-        query = query.in('data_source', selectedDataSources);
-      }
-
-      // Apply year filter
-      if (selectedYears.length > 0) {
-        const yearConditions = selectedYears.map(year => {
-          const startDate = `${year}-01-01`;
-          const endDate = `${year}-12-31`;
-          return `registration_date.gte.${startDate},registration_date.lte.${endDate}`;
-        });
-        query = query.or(yearConditions.join(','));
-      }
-
-      const { data, error } = await query;
+      const { data, error } = await supabaseQuery;
 
       if (error) throw error;
       
-      setFilteredSocieties(data || []);
+      let results = data || [];
+      
+      // Apply date filters
+      if (selectedYear !== 'all') {
+        results = results.filter(society => {
+          if (!society.registration_date) return false;
+          const year = new Date(society.registration_date).getFullYear();
+          return year.toString() === selectedYear;
+        });
+      }
+      
+      if (yearRange.start || yearRange.end) {
+        results = results.filter(society => {
+          if (!society.registration_date) return false;
+          const date = new Date(society.registration_date);
+          const start = yearRange.start ? new Date(yearRange.start) : new Date('1900-01-01');
+          const end = yearRange.end ? new Date(yearRange.end) : new Date();
+          return date >= start && date <= end;
+        });
+      }
+      
+      setFilteredSocieties(results);
       
     } catch (error) {
       console.error('Error filtering societies:', error);
-      // Fallback to client-side filtering
-      applyClientSideFilters();
+      applyFilters();
     }
   };
 
-  const applyClientSideFilters = () => {
+  const applyFilters = () => {
     let filtered = [...societies];
     
-    // Text search across multiple fields
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(society =>
-        society.society_name?.toLowerCase().includes(query) ||
-        society.registration_number?.toLowerCase().includes(query) ||
-        society.nature_of_society?.toLowerCase().includes(query) ||
-        society.registry_office?.toLowerCase().includes(query) ||
-        society.address?.toLowerCase().includes(query) ||
-        society.chairman_name?.toLowerCase().includes(query) ||
-        society.secretary_name?.toLowerCase().includes(query)
-      );
+    // Apply year filter
+    if (selectedYear !== 'all') {
+      filtered = filtered.filter(society => {
+        if (!society.registration_date) return false;
+        const year = new Date(society.registration_date).getFullYear();
+        return year.toString() === selectedYear;
+      });
     }
     
-    // Filter by nature of society
-    if (selectedNatures.length > 0) {
-      filtered = filtered.filter(society => 
-        society.nature_of_society && 
-        selectedNatures.includes(society.nature_of_society)
-      );
-    }
-    
-    // Filter by registry office
-    if (selectedOffices.length > 0) {
-      filtered = filtered.filter(society => 
-        society.registry_office && 
-        selectedOffices.includes(society.registry_office)
-      );
-    }
-    
-    // Filter by data source
-    if (selectedDataSources.length > 0) {
-      filtered = filtered.filter(society => 
-        society.data_source && 
-        selectedDataSources.includes(society.data_source)
-      );
-    }
-    
-    // Filter by registration year
-    if (selectedYears.length > 0) {
-      filtered = filtered.filter(society => 
-        society.registration_date && 
-        selectedYears.includes(new Date(society.registration_date).getFullYear().toString())
-      );
+    // Apply date range filter
+    if (yearRange.start || yearRange.end) {
+      filtered = filtered.filter(society => {
+        if (!society.registration_date) return false;
+        const date = new Date(society.registration_date);
+        const start = yearRange.start ? new Date(yearRange.start) : new Date('1900-01-01');
+        const end = yearRange.end ? new Date(yearRange.end) : new Date();
+        return date >= start && date <= end;
+      });
     }
     
     setFilteredSocieties(filtered);
   };
 
-  const getUniqueValues = (field: keyof Society) => {
-    // Use predefined common values based on database analysis
-    // This avoids performance issues with large datasets
-    switch (field) {
-      case 'nature_of_society':
-        return ['WELFARE', 'RELIGIOUS', 'ASSOCIATION', 'SPORTS', 'POLITICAL', 'SPORT', 'TRIBAL', 'CHARITABLE', 'PROPRIETARY', 'SOCIAL'];
-      case 'registry_office':
-        return ['NAIROBI', 'MOMBASA', 'NAKURU', 'KISUMU', 'ELDORET', 'KAYOLE', 'THIKA', 'KAKAMEGA', 'NRB', 'KIBERA'];
-      case 'data_source':
-        return ['main_registry', 'exempted_societies', 'ecitizen_registrations'];
-      case 'registration_status':
-        return []; // All records have null status
-      default:
-        // Fallback to client-side extraction for other fields
-        return Array.from(new Set(
-          societies
-            .map(society => society[field])
-            .filter(value => value && value.toString().trim() !== '')
-        )).sort();
-    }
-  };
-
-  const getStatusColor = (status: string | null) => {
-    if (!status) return 'bg-gray-100 text-gray-800';
-    
-    const lowerStatus = status.toLowerCase();
-    if (lowerStatus.includes('active') || lowerStatus.includes('approved')) {
-      return 'bg-green-100 text-green-800';
-    }
-    if (lowerStatus.includes('pending') || lowerStatus.includes('under review')) {
-      return 'bg-yellow-100 text-yellow-800';
-    }
-    if (lowerStatus.includes('suspended') || lowerStatus.includes('inactive')) {
-      return 'bg-red-100 text-red-800';
-    }
-    return 'bg-gray-100 text-gray-800';
+  const getAvailableYears = () => {
+    const years = new Set<number>();
+    societies.forEach(society => {
+      if (society.registration_date) {
+        years.add(new Date(society.registration_date).getFullYear());
+      }
+    });
+    return Array.from(years).sort((a, b) => b - a);
   };
 
   const formatDate = (dateString: string | null) => {
@@ -407,31 +250,15 @@ export default function SocietiesRegistryPage() {
     });
   };
 
-  const formatLargeNumber = (num: number) => {
-    if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
-    if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
-    return num.toString();
-  };
-
   const exportToCSV = () => {
-    const headers = [
-      'Registration Number',
-      'Society Name', 
-      'Registration Date',
-      'Registry Office',
-      'Nature of Society',
-      'Status'
-    ];
+    const headers = ['Registered Name', 'Registration Date', 'Registration Number'];
     
     const csvContent = [
       headers.join(','),
       ...filteredSocieties.map(society => [
-        society.registration_number || '',
-        society.society_name || '',
+        society.registered_name || '',
         society.registration_date || '',
-        society.registry_office || '',
-        society.nature_of_society || '',
-        society.registration_status || ''
+        society.registration_number || ''
       ].map(field => `"${field}"`).join(','))
     ].join('\n');
     
@@ -454,76 +281,37 @@ export default function SocietiesRegistryPage() {
     return Math.ceil(filteredSocieties.length / itemsPerPage);
   };
 
-  const getNatureDistribution = () => {
-    const natureCounts = societies.reduce((acc, society) => {
-      if (society.nature_of_society) {
-        acc[society.nature_of_society] = (acc[society.nature_of_society] || 0) + 1;
+  const getRegistrationTrend = () => {
+    const yearCounts = societies.reduce((acc, society) => {
+      if (society.registration_date) {
+        const year = new Date(society.registration_date).getFullYear();
+        acc[year] = (acc[year] || 0) + 1;
       }
       return acc;
-    }, {} as Record<string, number>);
+    }, {} as Record<number, number>);
     
-    const maxCount = Math.max(...Object.values(natureCounts));
+    const currentYear = new Date().getFullYear();
+    const years = [currentYear - 4, currentYear - 3, currentYear - 2, currentYear - 1, currentYear];
     
-    return Object.entries(natureCounts)
-      .map(([nature, count]) => ({
-        nature,
-        count,
-        total: maxCount
-      }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5);
-  };
-
-  const getOfficeDistribution = () => {
-    const officeCounts = societies.reduce((acc, society) => {
-      if (society.registry_office) {
-        acc[society.registry_office] = (acc[society.registry_office] || 0) + 1;
-      }
-      return acc;
-    }, {} as Record<string, number>);
-    
-    const maxCount = Math.max(...Object.values(officeCounts));
-    
-    return Object.entries(officeCounts)
-      .map(([office, count]) => ({
-        office,
-        count,
-        total: maxCount
-      }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5);
+    return years.map(year => ({
+      year,
+      count: yearCounts[year] || 0
+    }));
   };
 
   const SocietyCard = ({ society }: { society: Society }) => (
     <Card className="hover:shadow-md transition-shadow">
       <CardContent className="p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-          <div className="lg:col-span-2">
-            <div className="flex items-start justify-between mb-2">
-              <h3 className="font-semibold text-lg text-gray-900">
-                {society.society_name || 'Unnamed Society'}
-              </h3>
-              <div className="flex items-center space-x-2">
-                <Badge className={getStatusColor(society.registration_status)}>
-                  {society.registration_status || 'Unknown Status'}
-                </Badge>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setSelectedSociety(society);
-                    setShowSocietyDetails(true);
-                  }}
-                >
-                  <Eye className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex-1">
+            <h3 className="font-semibold text-lg text-gray-900 mb-2">
+              {society.registered_name || 'Unnamed Society'}
+            </h3>
             
             <div className="space-y-2 text-sm text-gray-600">
               <div className="flex items-center">
                 <FileText className="w-4 h-4 mr-2" />
-                <span className="font-medium">Reg No:</span>
+                <span className="font-medium">Registration No:</span>
                 <span className="ml-1">{society.registration_number || 'N/A'}</span>
               </div>
               
@@ -532,60 +320,19 @@ export default function SocietiesRegistryPage() {
                 <span className="font-medium">Registered:</span>
                 <span className="ml-1">{formatDate(society.registration_date)}</span>
               </div>
-              
-              <div className="flex items-center">
-                <Building className="w-4 h-4 mr-2" />
-                <span className="font-medium">Office:</span>
-                <span className="ml-1">{society.registry_office || 'N/A'}</span>
-              </div>
             </div>
           </div>
           
-          <div>
-            <div className="text-sm">
-              <span className="font-medium text-gray-700 block mb-1">Nature of Society:</span>
-              <span className="text-gray-600">
-                {society.nature_of_society || 'Not specified'}
-              </span>
-            </div>
-            
-            {society.member_count && (
-              <div className="text-sm mt-3">
-                <span className="font-medium text-gray-700 block mb-1">Members:</span>
-                <div className="flex items-center text-gray-600">
-                  <Users className="w-3 h-3 mr-1" />
-                  {society.member_count.toLocaleString()}
-                </div>
-              </div>
-            )}
-          </div>
-          
-          <div>
-            {society.address && (
-              <div className="text-sm">
-                <span className="font-medium text-gray-700 block mb-1">Address:</span>
-                <div className="flex items-center text-gray-600">
-                  <MapPin className="w-3 h-3 mr-1" />
-                  <span className="text-xs leading-relaxed">
-                    {society.address.length > 50 
-                      ? `${society.address.substring(0, 50)}...` 
-                      : society.address
-                    }
-                  </span>
-                </div>
-              </div>
-            )}
-            
-            {society.chairman_name && (
-              <div className="text-sm mt-3">
-                <span className="font-medium text-gray-700 block mb-1">Chairman:</span>
-                <div className="flex items-center text-gray-600">
-                  <User className="w-3 h-3 mr-1" />
-                  {society.chairman_name}
-                </div>
-              </div>
-            )}
-          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setSelectedSociety(society);
+              setShowSocietyDetails(true);
+            }}
+          >
+            <Eye className="w-4 h-4" />
+          </Button>
         </div>
       </CardContent>
     </Card>
@@ -623,32 +370,26 @@ export default function SocietiesRegistryPage() {
               </div>
               <div>
                 <h1 className="text-4xl font-bold text-white mb-2">Societies Registry</h1>
-                <p className="text-green-100">Registered societies, organizations and community groups</p>
+                <p className="text-green-100">Search registered societies and organizations</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 mt-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-8">
               <div className="text-center">
                 <div className="text-3xl font-bold text-white">{stats.totalSocieties}</div>
                 <div className="text-green-200 text-sm">Total Societies</div>
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-white">{stats.activeSocieties}</div>
-                <div className="text-green-200 text-sm">Active</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold text-white">{stats.thisYear}</div>
                 <div className="text-green-200 text-sm">This Year</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-white">
-                  {formatLargeNumber(stats.totalMembers)}
-                </div>
-                <div className="text-green-200 text-sm">Total Members</div>
+                <div className="text-3xl font-bold text-white">{stats.lastYear}</div>
+                <div className="text-green-200 text-sm">Last Year</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-white">{stats.avgMemberCount}</div>
-                <div className="text-green-200 text-sm">Avg Members</div>
+                <div className="text-3xl font-bold text-white">{stats.recent}</div>
+                <div className="text-green-200 text-sm">Recent</div>
               </div>
             </div>
           </motion.div>
@@ -663,14 +404,14 @@ export default function SocietiesRegistryPage() {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="mb-8"
         >
-          <div className="space-y-4">
-            <Card className="border-0 shadow-lg">
-              <CardContent className="p-6">
+          <Card className="border-0 shadow-lg">
+            <CardContent className="p-6">
+              <div className="space-y-4">
                 <div className="flex flex-col lg:flex-row gap-4 items-center">
                   <div className="flex-1 relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                     <Input
-                      placeholder="Search societies by name, registration number, nature, office, or chairman..."
+                      placeholder="Search by society name or registration number..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="pl-10"
@@ -678,299 +419,53 @@ export default function SocietiesRegistryPage() {
                   </div>
                   
                   <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => setIsFiltersOpen(!isFiltersOpen)}>
-                      <Filter className="w-4 h-4 mr-2" />
-                      Filters
-                    </Button>
-                    
                     <Button variant="outline" onClick={exportToCSV} disabled={filteredSocieties.length === 0}>
                       <Download className="w-4 h-4 mr-2" />
                       Export
                     </Button>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
 
-            {/* Filters Panel */}
-            {isFiltersOpen && (
-              <Card className="border shadow-lg">
-                <CardContent className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-                            {/* Status Filter */}
-                            <div>
-                              <Label className="text-sm font-medium mb-2 block">Status</Label>
-                              <div className="space-y-2 max-h-40 overflow-y-auto">
-                                {getUniqueValues('registration_status').map((status) => (
-                                  <div key={status} className="flex items-center space-x-2">
-                                    <Checkbox
-                                      id={`status-${status}`}
-                                      checked={selectedStatuses.includes(status as string)}
-                                      onCheckedChange={(checked) => {
-                                        if (checked) {
-                                          setSelectedStatuses([...selectedStatuses, status as string]);
-                                        } else {
-                                          setSelectedStatuses(selectedStatuses.filter(s => s !== status));
-                                        }
-                                      }}
-                                    />
-                                    <Label htmlFor={`status-${status}`} className="text-sm">{status}</Label>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-
-                            {/* Nature Filter */}
-                            <div>
-                              <Label className="text-sm font-medium mb-2 block">Nature</Label>
-                              <div className="space-y-2 max-h-40 overflow-y-auto">
-                                {getUniqueValues('nature_of_society').map((nature) => (
-                                  <div key={nature} className="flex items-center space-x-2">
-                                    <Checkbox
-                                      id={`nature-${nature}`}
-                                      checked={selectedNatures.includes(nature as string)}
-                                      onCheckedChange={(checked) => {
-                                        if (checked) {
-                                          setSelectedNatures([...selectedNatures, nature as string]);
-                                        } else {
-                                          setSelectedNatures(selectedNatures.filter(n => n !== nature));
-                                        }
-                                      }}
-                                    />
-                                    <Label htmlFor={`nature-${nature}`} className="text-sm">{nature}</Label>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-
-                            {/* Registry Office Filter */}
-                            <div>
-                              <Label className="text-sm font-medium mb-2 block">Registry Office</Label>
-                              <div className="space-y-2 max-h-40 overflow-y-auto">
-                                {getUniqueValues('registry_office').map((office) => (
-                                  <div key={office} className="flex items-center space-x-2">
-                                    <Checkbox
-                                      id={`office-${office}`}
-                                      checked={selectedOffices.includes(office as string)}
-                                      onCheckedChange={(checked) => {
-                                        if (checked) {
-                                          setSelectedOffices([...selectedOffices, office as string]);
-                                        } else {
-                                          setSelectedOffices(selectedOffices.filter(o => o !== office));
-                                        }
-                                      }}
-                                    />
-                                    <Label htmlFor={`office-${office}`} className="text-sm">{office}</Label>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-
-                            {/* Data Source Filter */}
-                            <div>
-                              <Label className="text-sm font-medium mb-2 block">Data Source</Label>
-                              <div className="space-y-2 max-h-40 overflow-y-auto">
-                                {getUniqueValues('data_source').map((source) => (
-                                  <div key={source} className="flex items-center space-x-2">
-                                    <Checkbox
-                                      id={`source-${source}`}
-                                      checked={selectedDataSources.includes(source as string)}
-                                      onCheckedChange={(checked) => {
-                                        if (checked) {
-                                          setSelectedDataSources([...selectedDataSources, source as string]);
-                                        } else {
-                                          setSelectedDataSources(selectedDataSources.filter(s => s !== source));
-                                        }
-                                      }}
-                                    />
-                                    <Label htmlFor={`source-${source}`} className="text-sm">{source}</Label>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-
-                            {/* Years Filter */}
-                            <div>
-                              <Label className="text-sm font-medium mb-2 block">Year</Label>
-                              <div className="space-y-2 max-h-40 overflow-y-auto">
-                                {[2021, 2018, 2017, 2016, 2015, 2014, 2013, 2012, 2011, 2010, 2009, 2008, 2007, 2006, 2005].map((year) => (
-                                  <div key={year} className="flex items-center space-x-2">
-                                    <Checkbox
-                                      id={`year-${year}`}
-                                      checked={selectedYears.includes(year.toString())}
-                                      onCheckedChange={(checked) => {
-                                        if (checked) {
-                                          setSelectedYears([...selectedYears, year.toString()]);
-                                        } else {
-                                          setSelectedYears(selectedYears.filter(y => y !== year.toString()));
-                                        }
-                                      }}
-                                    />
-                                    <Label htmlFor={`year-${year}`} className="text-sm">{year}</Label>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="flex justify-between items-center mt-6 pt-4 border-t">
-                            <Button
-                              variant="outline"
-                              onClick={() => {
-                                setSelectedStatuses([]);
-                                setSelectedNatures([]);
-                                setSelectedOffices([]);
-                                setSelectedDataSources([]);
-                                setSelectedYears([]);
-                              }}
-                            >
-                              Clear All
-                            </Button>
-                            <Button onClick={() => setIsFiltersOpen(false)}>
-                              Apply Filters
-                            </Button>
-                          </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </motion.div>
-
-        {/* Analytics Dashboard */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.25 }}
-          className="mb-8"
-        >
-          <Card className="border-0 shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <BarChart3 className="w-5 h-5 mr-2" />
-                Society Analytics Dashboard
-              </CardTitle>
-              <CardDescription>
-                Real-time insights and trends from the societies registry database
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {/* Registration Rate */}
-                <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium text-green-800">Active Rate</h4>
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div className="text-2xl font-bold text-green-700">
-                      {stats.totalSocieties > 0 ? Math.round((stats.activeSocieties / stats.totalSocieties) * 100) : 0}%
-                    </div>
-                    <p className="text-sm text-green-600">
-                      {stats.activeSocieties} of {stats.totalSocieties} societies active
-                    </p>
-                  </CardContent>
-                </Card>
-
-                {/* Member Coverage */}
-                <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium text-blue-800">Member Coverage</h4>
-                      <Users className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div className="text-2xl font-bold text-blue-700">
-                      {formatLargeNumber(stats.totalMembers)}
-                    </div>
-                    <p className="text-sm text-blue-600">
-                      Total registered members
-                    </p>
-                  </CardContent>
-                </Card>
-
-                {/* Top Registry */}
-                <Card className="bg-gradient-to-br from-purple-50 to-violet-50 border-purple-200">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium text-purple-800">Top Registry</h4>
-                      <Building className="w-5 h-5 text-purple-600" />
-                    </div>
-                    <div className="text-lg font-bold text-purple-700 truncate">
-                      {stats.topRegistry}
-                    </div>
-                    <p className="text-sm text-purple-600">
-                      Most active registry office
-                    </p>
-                  </CardContent>
-                </Card>
-
-                {/* Growth Rate */}
-                <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium text-amber-800">This Year</h4>
-                      <TrendingUp className="w-5 h-5 text-amber-600" />
-                    </div>
-                    <div className="text-2xl font-bold text-amber-700">
-                      {stats.thisYear}
-                    </div>
-                    <p className="text-sm text-amber-600">
-                      New registrations in {new Date().getFullYear()}
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Trends Section */}
-              <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card className="bg-gray-50">
-                  <CardContent className="p-4">
-                    <h4 className="font-medium text-gray-800 mb-3 flex items-center">
-                      <TrendingUp className="w-4 h-4 mr-2" />
-                      Top Nature of Society
-                    </h4>
-                    <div className="space-y-2">
-                      {getNatureDistribution().map((nature, index) => (
-                        <div key={nature.nature} className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600 truncate max-w-xs" title={nature.nature}>
-                            {nature.nature.length > 25 ? `${nature.nature.substring(0, 25)}...` : nature.nature}
-                          </span>
-                          <div className="flex items-center space-x-2">
-                            <div 
-                              className="h-2 bg-green-500 rounded" 
-                              style={{ width: `${(nature.count / nature.total) * 100}px` }}
-                            />
-                            <span className="text-sm font-medium text-gray-800">{nature.count}</span>
-                          </div>
-                        </div>
+                {/* Date Filters */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Select value={selectedYear} onValueChange={setSelectedYear}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filter by year" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Years</SelectItem>
+                      {getAvailableYears().map(year => (
+                        <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
                       ))}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-gray-50">
-                  <CardContent className="p-4">
-                    <h4 className="font-medium text-gray-800 mb-3 flex items-center">
-                      <Globe className="w-4 h-4 mr-2" />
-                      Top Registry Offices
-                    </h4>
-                    <div className="space-y-2">
-                      {getOfficeDistribution().map((office, index) => (
-                        <div key={office.office} className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600 truncate max-w-xs" title={office.office}>
-                            {office.office.length > 25 ? `${office.office.substring(0, 25)}...` : office.office}
-                          </span>
-                          <div className="flex items-center space-x-2">
-                            <div 
-                              className="h-2 bg-blue-500 rounded" 
-                              style={{ width: `${(office.count / office.total) * 100}px` }}
-                            />
-                            <span className="text-sm font-medium text-gray-800">{office.count}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                    </SelectContent>
+                  </Select>
+                  
+                  <Input
+                    type="date"
+                    placeholder="Start date"
+                    value={yearRange.start}
+                    onChange={(e) => setYearRange({ ...yearRange, start: e.target.value })}
+                  />
+                  
+                  <Input
+                    type="date"
+                    placeholder="End date"
+                    value={yearRange.end}
+                    onChange={(e) => setYearRange({ ...yearRange, end: e.target.value })}
+                  />
+                </div>
+                
+                {(selectedYear !== 'all' || yearRange.start || yearRange.end) && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedYear('all');
+                      setYearRange({ start: '', end: '' });
+                    }}
+                  >
+                    Clear Filters
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -1014,7 +509,7 @@ export default function SocietiesRegistryPage() {
                   <Building2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No societies found</h3>
                   <p className="text-gray-500">
-                    {searchQuery || selectedStatuses.length > 0 || selectedNatures.length > 0 || selectedOffices.length > 0
+                    {searchQuery || selectedYear !== 'all' || yearRange.start || yearRange.end
                       ? 'Try adjusting your search criteria or filters'
                       : 'No societies are currently available in the registry'
                     }
@@ -1084,29 +579,28 @@ export default function SocietiesRegistryPage() {
 
       {/* Detailed Society View Modal */}
       <Dialog open={showSocietyDetails} onOpenChange={setShowSocietyDetails}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center">
               <Building2 className="w-5 h-5 mr-2" />
               Society Details
             </DialogTitle>
             <DialogDescription>
-              Complete information for {selectedSociety?.society_name || 'this society'}
+              Complete information for {selectedSociety?.registered_name || 'this society'}
             </DialogDescription>
           </DialogHeader>
           
           {selectedSociety && (
             <div className="space-y-6">
-              {/* Society Summary */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Society Summary</CardTitle>
+                  <CardTitle className="text-lg">Society Information</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <span className="text-sm font-medium text-gray-600">Society Name:</span>
-                      <div className="text-sm mt-1">{selectedSociety.society_name || 'N/A'}</div>
+                      <div className="text-sm mt-1">{selectedSociety.registered_name || 'N/A'}</div>
                     </div>
                     <div>
                       <span className="text-sm font-medium text-gray-600">Registration Number:</span>
@@ -1117,91 +611,13 @@ export default function SocietiesRegistryPage() {
                       <div className="text-sm mt-1">{formatDate(selectedSociety.registration_date)}</div>
                     </div>
                     <div>
-                      <span className="text-sm font-medium text-gray-600">Status:</span>
-                      <div className="mt-1">
-                        <Badge className={getStatusColor(selectedSociety.registration_status)}>
-                          {selectedSociety.registration_status || 'Unknown'}
-                        </Badge>
-                      </div>
+                      <span className="text-sm font-medium text-gray-600">Last Updated:</span>
+                      <div className="text-sm mt-1">{formatDate(selectedSociety.updated_at)}</div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Registry Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center">
-                    <Building className="w-4 h-4 mr-2" />
-                    Registry Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <span className="text-sm font-medium text-gray-600">Registry Office:</span>
-                      <div className="text-sm mt-1">{selectedSociety.registry_office || 'N/A'}</div>
-                    </div>
-                    <div>
-                      <span className="text-sm font-medium text-gray-600">Nature of Society:</span>
-                      <div className="text-sm mt-1">{selectedSociety.nature_of_society || 'N/A'}</div>
-                    </div>
-                    <div>
-                      <span className="text-sm font-medium text-gray-600">Member Class:</span>
-                      <div className="text-sm mt-1">{selectedSociety.member_class || 'N/A'}</div>
-                    </div>
-                    <div>
-                      <span className="text-sm font-medium text-gray-600">Member Count:</span>
-                      <div className="text-sm mt-1">{selectedSociety.member_count?.toLocaleString() || 'N/A'}</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Leadership */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center">
-                    <Users className="w-4 h-4 mr-2" />
-                    Leadership
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <span className="text-sm font-medium text-gray-600">Chairman:</span>
-                      <div className="text-sm mt-1">{selectedSociety.chairman_name || 'N/A'}</div>
-                    </div>
-                    <div>
-                      <span className="text-sm font-medium text-gray-600">Secretary:</span>
-                      <div className="text-sm mt-1">{selectedSociety.secretary_name || 'N/A'}</div>
-                    </div>
-                    <div>
-                      <span className="text-sm font-medium text-gray-600">Treasurer:</span>
-                      <div className="text-sm mt-1">{selectedSociety.treasurer_name || 'N/A'}</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Address Information */}
-              {selectedSociety.address && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center">
-                      <MapPin className="w-4 h-4 mr-2" />
-                      Address Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-sm p-3 bg-gray-50 rounded-md">
-                      {selectedSociety.address}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Footer Actions */}
               <div className="flex justify-end space-x-2 pt-4 border-t">
                 <Button variant="outline" onClick={() => setShowSocietyDetails(false)}>
                   Close
@@ -1210,15 +626,12 @@ export default function SocietiesRegistryPage() {
                   onClick={() => {
                     const societyData = [
                       selectedSociety.registration_number || '',
-                      selectedSociety.society_name || '',
-                      selectedSociety.registration_date || '',
-                      selectedSociety.registry_office || '',
-                      selectedSociety.nature_of_society || '',
-                      selectedSociety.registration_status || ''
+                      selectedSociety.registered_name || '',
+                      selectedSociety.registration_date || ''
                     ].map(field => `"${field}"`).join(',');
                     
                     const csvContent = [
-                      'Registration Number,Society Name,Registration Date,Registry Office,Nature of Society,Status',
+                      'Registration Number,Society Name,Registration Date',
                       societyData
                     ].join('\n');
                     
@@ -1232,7 +645,7 @@ export default function SocietiesRegistryPage() {
                   }}
                 >
                   <Download className="w-4 h-4 mr-2" />
-                  Export Society
+                  Export Details
                 </Button>
               </div>
             </div>
@@ -1241,4 +654,16 @@ export default function SocietiesRegistryPage() {
       </Dialog>
     </div>
   );
+}
+
+// Utility function for debouncing
+function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => void {
+  let timeout: NodeJS.Timeout;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
 }

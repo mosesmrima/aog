@@ -6,14 +6,15 @@ import { motion } from 'framer-motion';
 import { 
   Building2, 
   Search, 
-  Filter, 
-  MapPin, 
-  Users, 
+  Plus, 
   Calendar,
   FileText,
-  Award,
   Eye,
-  ArrowUpDown
+  ArrowUpDown,
+  Upload,
+  Download,
+  Filter,
+  X
 } from 'lucide-react';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -45,30 +46,13 @@ import {
 } from '@/components/ui/select';
 import { useAuth } from '@/components/providers/auth-provider';
 import { supabase } from '@/lib/supabase';
+import { SocietiesCSVImportDialog } from '@/components/societies/csv-import-dialog';
 
 interface Society {
   id: string;
-  registration_number: string;
-  society_name: string;
-  registration_date: string;
-  file_number: string;
-  registry_office: string;
-  address: string;
-  nature_of_society: string;
-  member_class: string;
-  member_count: number;
-  chairman_name: string;
-  secretary_name: string;
-  treasurer_name: string;
-  exemption_number: string;
-  exemption_date: string;
-  application_number: string;
-  service_type: string;
-  submitted_by: string;
-  registration_status: string;
-  comments: string;
-  data_source: string;
-  data_quality_score: number;
+  registered_name: string | null;
+  registration_date: string | null;
+  registration_number: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -83,25 +67,21 @@ export default function SocietiesPage() {
   const [societies, setSocieties] = useState<Society[]>([]);
   const [isLoadingSocieties, setIsLoadingSocieties] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [typeFilter, setTypeFilter] = useState('all');
+  const [selectedYear, setSelectedYear] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalSocieties, setTotalSocieties] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [selectedSociety, setSelectedSociety] = useState<Society | null>(null);
-  const [sortField, setSortField] = useState<string>('society_name');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-
-  // Filter options
-  const [societyTypes, setSocietyTypes] = useState<string[]>([]);
-  const [statusOptions, setStatusOptions] = useState<string[]>([]);
+  const [sortField, setSortField] = useState<string>('created_at');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [showImportDialog, setShowImportDialog] = useState(false);
 
   // Summary stats
   const [stats, setStats] = useState({
     totalSocieties: 0,
-    activeSocieties: 0,
-    exemptedSocieties: 0,
-    totalMembers: 0
+    thisYear: 0,
+    lastYear: 0,
+    recent: 0
   });
 
   useEffect(() => {
@@ -113,10 +93,9 @@ export default function SocietiesPage() {
   useEffect(() => {
     if (user?.is_approved) {
       loadSocieties();
-      loadFilterOptions();
       loadStats();
     }
-  }, [user, searchTerm, statusFilter, typeFilter, currentPage, sortField, sortDirection]);
+  }, [user, searchTerm, selectedYear, currentPage, sortField, sortDirection]);
 
   const loadSocieties = async () => {
     try {
@@ -127,17 +106,16 @@ export default function SocietiesPage() {
         .select('*', { count: 'exact' })
         .order(sortField, { ascending: sortDirection === 'asc' });
 
-      // Apply filters
+      // Apply search filter
       if (searchTerm) {
-        query = query.or(`society_name.ilike.%${searchTerm}%,registration_number.ilike.%${searchTerm}%,chairman_name.ilike.%${searchTerm}%,address.ilike.%${searchTerm}%`);
+        query = query.or(`registered_name.ilike.%${searchTerm}%,registration_number.ilike.%${searchTerm}%`);
       }
       
-      if (statusFilter !== 'all') {
-        query = query.eq('registration_status', statusFilter);
-      }
-      
-      if (typeFilter !== 'all') {
-        query = query.eq('nature_of_society', typeFilter);
+      // Apply year filter
+      if (selectedYear !== 'all') {
+        const startOfYear = `${selectedYear}-01-01`;
+        const endOfYear = `${selectedYear}-12-31`;
+        query = query.gte('registration_date', startOfYear).lte('registration_date', endOfYear);
       }
 
       // Pagination
@@ -159,31 +137,6 @@ export default function SocietiesPage() {
     }
   };
 
-  const loadFilterOptions = async () => {
-    try {
-      // Load unique society types
-      const { data: types } = await supabase
-        .from('societies')
-        .select('nature_of_society')
-        .not('nature_of_society', 'is', null);
-      
-      const uniqueTypes = Array.from(new Set(types?.map(t => t.nature_of_society) || [])).sort();
-      setSocietyTypes(uniqueTypes);
-
-      // Load unique statuses
-      const { data: statuses } = await supabase
-        .from('societies')
-        .select('registration_status')
-        .not('registration_status', 'is', null);
-      
-      const uniqueStatuses = Array.from(new Set(statuses?.map(s => s.registration_status) || [])).sort();
-      setStatusOptions(uniqueStatuses);
-
-    } catch (error) {
-      console.error('Error loading filter options:', error);
-    }
-  };
-
   const loadStats = async () => {
     try {
       const { data: societies, error } = await supabase
@@ -194,23 +147,28 @@ export default function SocietiesPage() {
 
       const societiesData = societies || [];
       const totalSocieties = societiesData.length;
+      const currentYear = new Date().getFullYear();
       
-      // Count active vs exempted societies
-      const exemptedSocieties = societiesData.filter(s => 
-        s.exemption_number || s.data_source === 'exempted_societies'
+      const thisYear = societiesData.filter(s => 
+        s.registration_date && 
+        new Date(s.registration_date).getFullYear() === currentYear
       ).length;
-      const activeSocieties = totalSocieties - exemptedSocieties;
-
-      // Calculate total members
-      const totalMembers = societiesData.reduce((sum, society) => {
-        return sum + (society.member_count || 0);
-      }, 0);
+      
+      const lastYear = societiesData.filter(s => 
+        s.registration_date && 
+        new Date(s.registration_date).getFullYear() === currentYear - 1
+      ).length;
+      
+      const recent = societiesData.filter(s => 
+        s.created_at && 
+        new Date(s.created_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+      ).length;
 
       setStats({
         totalSocieties,
-        activeSocieties,
-        exemptedSocieties,
-        totalMembers
+        thisYear,
+        lastYear,
+        recent
       });
     } catch (error) {
       console.error('Error loading stats:', error);
@@ -227,31 +185,56 @@ export default function SocietiesPage() {
     setCurrentPage(1);
   };
 
-  const getStatusColor = (status: string | null) => {
-    if (!status || typeof status !== 'string') {
-      return 'bg-gray-100 text-gray-800';
-    }
-    
-    const lowerStatus = status.toLowerCase();
-    if (lowerStatus.includes('registered') || lowerStatus.includes('active')) {
-      return 'bg-green-100 text-green-800';
-    }
-    if (lowerStatus.includes('pending') || lowerStatus.includes('processing')) {
-      return 'bg-yellow-100 text-yellow-800';
-    }
-    if (lowerStatus.includes('exempted') || lowerStatus.includes('exempt')) {
-      return 'bg-blue-100 text-blue-800';
-    }
-    if (lowerStatus.includes('cancelled') || lowerStatus.includes('rejected')) {
-      return 'bg-red-100 text-red-800';
-    }
-    return 'bg-gray-100 text-gray-800';
+  const getAvailableYears = () => {
+    const years = new Set<number>();
+    societies.forEach(society => {
+      if (society.registration_date) {
+        years.add(new Date(society.registration_date).getFullYear());
+      }
+    });
+    return Array.from(years).sort((a, b) => b - a);
   };
 
-  const formatLargeNumber = (num: number) => {
-    if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
-    if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
-    return num.toString();
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const exportToCSV = () => {
+    const headers = ['Registered Name', 'Registration Date', 'Registration Number'];
+    
+    const csvContent = [
+      headers.join(','),
+      ...societies.map(society => [
+        society.registered_name || '',
+        society.registration_date || '',
+        society.registration_number || ''
+      ].map(field => `"${field}"`).join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `societies-admin-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setSelectedYear('all');
+    setCurrentPage(1);
+  };
+
+  const handleImportComplete = () => {
+    setShowImportDialog(false);
+    loadSocieties();
+    loadStats();
   };
 
   if (isLoading) {
@@ -282,13 +265,26 @@ export default function SocietiesPage() {
             transition={{ duration: 0.5 }}
             className="mb-8"
           >
-            <div className="flex items-center space-x-4 mb-6">
-              <div className="w-12 h-12 bg-gradient-to-br from-emerald-600 to-teal-700 rounded-xl flex items-center justify-center">
-                <Building2 className="w-6 h-6 text-white" />
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-emerald-600 to-teal-700 rounded-xl flex items-center justify-center">
+                  <Building2 className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900">Societies Management</h1>
+                  <p className="text-gray-600">Manage registered societies and organizations</p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Public Societies Registry</h1>
-                <p className="text-gray-600">Browse registered societies and organizations</p>
+              
+              <div className="flex items-center space-x-4">
+                <Button onClick={exportToCSV} variant="outline" disabled={societies.length === 0}>
+                  <Download className="w-4 h-4 mr-2" />
+                  Export CSV
+                </Button>
+                <Button onClick={() => setShowImportDialog(true)} className="bg-green-600 hover:bg-green-700">
+                  <Upload className="w-4 h-4 mr-2" />
+                  Import CSV
+                </Button>
               </div>
             </div>
           </motion.div>
@@ -313,34 +309,34 @@ export default function SocietiesPage() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Societies</CardTitle>
-                <Award className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">This Year</CardTitle>
+                <Calendar className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.activeSocieties}</div>
-                <p className="text-xs text-muted-foreground">Currently active</p>
+                <div className="text-2xl font-bold">{stats.thisYear}</div>
+                <p className="text-xs text-muted-foreground">Registered in {new Date().getFullYear()}</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Members</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">Last Year</CardTitle>
+                <Calendar className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatLargeNumber(stats.totalMembers)}</div>
-                <p className="text-xs text-muted-foreground">Across all societies</p>
+                <div className="text-2xl font-bold">{stats.lastYear}</div>
+                <p className="text-xs text-muted-foreground">Registered in {new Date().getFullYear() - 1}</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Exempted</CardTitle>
+                <CardTitle className="text-sm font-medium">Recent</CardTitle>
                 <FileText className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.exemptedSocieties}</div>
-                <p className="text-xs text-muted-foreground">Special status</p>
+                <div className="text-2xl font-bold">{stats.recent}</div>
+                <p className="text-xs text-muted-foreground">Added in last 30 days</p>
               </CardContent>
             </Card>
           </motion.div>
@@ -348,50 +344,35 @@ export default function SocietiesPage() {
           {/* Filters */}
           <Card className="mb-6">
             <CardContent className="pt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <Input
-                    placeholder="Search societies..."
+                    placeholder="Search by name or registration number..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10"
                   />
                 </div>
                 
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <Select value={selectedYear} onValueChange={setSelectedYear}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Filter by status" />
+                    <SelectValue placeholder="Filter by year" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    {statusOptions.map(status => (
-                      <SelectItem key={status} value={status}>{status}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                
-                <Select value={typeFilter} onValueChange={setTypeFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Filter by type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    {societyTypes.map(type => (
-                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    <SelectItem value="all">All Years</SelectItem>
+                    {getAvailableYears().map(year => (
+                      <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 
                 <Button 
                   variant="outline" 
-                  onClick={() => {
-                    setSearchTerm('');
-                    setStatusFilter('all');
-                    setTypeFilter('all');
-                    setCurrentPage(1);
-                  }}
+                  onClick={clearFilters}
+                  disabled={!searchTerm && selectedYear === 'all'}
                 >
+                  <X className="w-4 h-4 mr-2" />
                   Clear Filters
                 </Button>
               </div>
@@ -401,7 +382,7 @@ export default function SocietiesPage() {
           {/* Societies Table */}
           <Card>
             <CardHeader>
-              <CardTitle>Registered Societies ({totalSocieties} total)</CardTitle>
+              <CardTitle>Societies Registry ({totalSocieties} total)</CardTitle>
               <CardDescription>
                 Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, totalSocieties)} of {totalSocieties} societies
               </CardDescription>
@@ -413,26 +394,40 @@ export default function SocietiesPage() {
                     <TableRow>
                       <TableHead 
                         className="cursor-pointer hover:bg-gray-50"
-                        onClick={() => handleSort('registration_number')}
-                      >
-                        <div className="flex items-center space-x-1">
-                          <span>Registration No.</span>
-                          <ArrowUpDown className="w-3 h-3" />
-                        </div>
-                      </TableHead>
-                      <TableHead 
-                        className="cursor-pointer hover:bg-gray-50"
-                        onClick={() => handleSort('society_name')}
+                        onClick={() => handleSort('registered_name')}
                       >
                         <div className="flex items-center space-x-1">
                           <span>Society Name</span>
                           <ArrowUpDown className="w-3 h-3" />
                         </div>
                       </TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Members</TableHead>
-                      <TableHead>Location</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-gray-50"
+                        onClick={() => handleSort('registration_number')}
+                      >
+                        <div className="flex items-center space-x-1">
+                          <span>Registration Number</span>
+                          <ArrowUpDown className="w-3 h-3" />
+                        </div>
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-gray-50"
+                        onClick={() => handleSort('registration_date')}
+                      >
+                        <div className="flex items-center space-x-1">
+                          <span>Registration Date</span>
+                          <ArrowUpDown className="w-3 h-3" />
+                        </div>
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-gray-50"
+                        onClick={() => handleSort('created_at')}
+                      >
+                        <div className="flex items-center space-x-1">
+                          <span>Added</span>
+                          <ArrowUpDown className="w-3 h-3" />
+                        </div>
+                      </TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -440,7 +435,7 @@ export default function SocietiesPage() {
                     {isLoadingSocieties ? (
                       Array.from({ length: 5 }).map((_, i) => (
                         <TableRow key={i}>
-                          <TableCell colSpan={7} className="text-center py-8">
+                          <TableCell colSpan={5} className="text-center py-8">
                             <div className="animate-pulse space-y-2">
                               <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto"></div>
                               <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
@@ -450,46 +445,42 @@ export default function SocietiesPage() {
                       ))
                     ) : societies.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8">
+                        <TableCell colSpan={5} className="text-center py-8">
                           <div className="flex flex-col items-center space-y-2">
                             <Building2 className="w-12 h-12 text-gray-400" />
                             <p className="text-gray-500">No societies found matching your criteria</p>
+                            <Button 
+                              onClick={() => setShowImportDialog(true)}
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              <Upload className="w-4 h-4 mr-2" />
+                              Import CSV Data
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
                     ) : (
                       societies.map((society) => (
                         <TableRow key={society.id} className="hover:bg-gray-50">
-                          <TableCell className="font-mono text-xs">
-                            {society.registration_number || '-'}
-                          </TableCell>
                           <TableCell className="max-w-xs">
-                            <div className="truncate font-medium" title={society.society_name || ''}>
-                              {society.society_name || '-'}
-                            </div>
-                            {society.chairman_name && (
-                              <div className="text-xs text-gray-500 truncate">
-                                Chair: {society.chairman_name}
-                              </div>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">
-                              {society.nature_of_society || 'Unknown'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {society.member_count || '-'}
-                          </TableCell>
-                          <TableCell className="max-w-xs">
-                            <div className="truncate text-sm" title={society.address || ''}>
-                              {society.registry_office || society.address || '-'}
+                            <div className="font-medium truncate" title={society.registered_name || ''}>
+                              {society.registered_name || 'Unnamed Society'}
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge className={getStatusColor(society.registration_status)}>
-                              {society.registration_status || 'Unknown'}
-                            </Badge>
+                            <div className="font-mono text-sm">
+                              {society.registration_number || '-'}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm">
+                              {formatDate(society.registration_date)}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm text-gray-500">
+                              {formatDate(society.created_at)}
+                            </div>
                           </TableCell>
                           <TableCell>
                             <Dialog>
@@ -502,85 +493,44 @@ export default function SocietiesPage() {
                                   <Eye className="w-4 h-4" />
                                 </Button>
                               </DialogTrigger>
-                              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                              <DialogContent className="max-w-2xl">
                                 <DialogHeader>
                                   <DialogTitle>Society Details</DialogTitle>
                                   <DialogDescription>
-                                    Complete information for {selectedSociety?.society_name}
+                                    Complete information for {selectedSociety?.registered_name || 'this society'}
                                   </DialogDescription>
                                 </DialogHeader>
                                 {selectedSociety && (
-                                  <div className="grid grid-cols-2 gap-4 py-4">
-                                    <div>
-                                      <span className="text-sm text-gray-500">Registration Number:</span>
-                                      <div className="font-mono text-sm">{selectedSociety.registration_number || '-'}</div>
-                                    </div>
-                                    <div>
-                                      <span className="text-sm text-gray-500">Society Name:</span>
-                                      <div className="font-medium">{selectedSociety.society_name || '-'}</div>
-                                    </div>
-                                    <div>
-                                      <span className="text-sm text-gray-500">Registration Date:</span>
-                                      <div>
-                                        {selectedSociety.registration_date ? 
-                                          new Date(selectedSociety.registration_date).toLocaleDateString() : '-'}
-                                      </div>
-                                    </div>
-                                    <div>
-                                      <span className="text-sm text-gray-500">Registry Office:</span>
-                                      <div>{selectedSociety.registry_office || '-'}</div>
-                                    </div>
-                                    <div>
-                                      <span className="text-sm text-gray-500">Nature of Society:</span>
-                                      <div>{selectedSociety.nature_of_society || '-'}</div>
-                                    </div>
-                                    <div>
-                                      <span className="text-sm text-gray-500">Member Count:</span>
-                                      <div>{selectedSociety.member_count || '-'}</div>
-                                    </div>
-                                    <div className="col-span-2">
-                                      <span className="text-sm text-gray-500">Address:</span>
-                                      <div className="mt-1 p-3 bg-gray-50 rounded">{selectedSociety.address || '-'}</div>
-                                    </div>
-                                    <div>
-                                      <span className="text-sm text-gray-500">Chairman:</span>
-                                      <div>{selectedSociety.chairman_name || '-'}</div>
-                                    </div>
-                                    <div>
-                                      <span className="text-sm text-gray-500">Secretary:</span>
-                                      <div>{selectedSociety.secretary_name || '-'}</div>
-                                    </div>
-                                    <div>
-                                      <span className="text-sm text-gray-500">Status:</span>
-                                      <div>
-                                        <Badge className={getStatusColor(selectedSociety.registration_status)}>
-                                          {selectedSociety.registration_status || 'Unknown'}
-                                        </Badge>
-                                      </div>
-                                    </div>
-                                    <div>
-                                      <span className="text-sm text-gray-500">Data Source:</span>
-                                      <div className="text-xs">
-                                        <Badge variant="secondary">
-                                          {selectedSociety.data_source?.replace('_', ' ') || 'Unknown'}
-                                        </Badge>
-                                      </div>
-                                    </div>
-                                    {selectedSociety.exemption_number && (
-                                      <div className="col-span-2">
-                                        <span className="text-sm text-gray-500">Exemption Details:</span>
-                                        <div className="mt-1 p-3 bg-blue-50 rounded">
-                                          <div className="text-sm">
-                                            <strong>Number:</strong> {selectedSociety.exemption_number}
+                                  <div className="space-y-6">
+                                    <Card>
+                                      <CardHeader>
+                                        <CardTitle className="text-lg">Society Information</CardTitle>
+                                      </CardHeader>
+                                      <CardContent>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                          <div>
+                                            <span className="text-sm font-medium text-gray-600">Society Name:</span>
+                                            <div className="text-sm mt-1">{selectedSociety.registered_name || 'N/A'}</div>
                                           </div>
-                                          {selectedSociety.exemption_date && (
-                                            <div className="text-sm">
-                                              <strong>Date:</strong> {new Date(selectedSociety.exemption_date).toLocaleDateString()}
-                                            </div>
-                                          )}
+                                          <div>
+                                            <span className="text-sm font-medium text-gray-600">Registration Number:</span>
+                                            <div className="font-mono text-sm mt-1">{selectedSociety.registration_number || 'N/A'}</div>
+                                          </div>
+                                          <div>
+                                            <span className="text-sm font-medium text-gray-600">Registration Date:</span>
+                                            <div className="text-sm mt-1">{formatDate(selectedSociety.registration_date)}</div>
+                                          </div>
+                                          <div>
+                                            <span className="text-sm font-medium text-gray-600">Added to System:</span>
+                                            <div className="text-sm mt-1">{formatDate(selectedSociety.created_at)}</div>
+                                          </div>
+                                          <div>
+                                            <span className="text-sm font-medium text-gray-600">Last Updated:</span>
+                                            <div className="text-sm mt-1">{formatDate(selectedSociety.updated_at)}</div>
+                                          </div>
                                         </div>
-                                      </div>
-                                    )}
+                                      </CardContent>
+                                    </Card>
                                   </div>
                                 )}
                               </DialogContent>
@@ -623,6 +573,13 @@ export default function SocietiesPage() {
           </Card>
         </div>
       </main>
+
+      {/* CSV Import Dialog */}
+      <SocietiesCSVImportDialog 
+        open={showImportDialog} 
+        onOpenChange={setShowImportDialog}
+        onImportComplete={handleImportComplete}
+      />
     </div>
   );
 }

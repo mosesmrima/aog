@@ -21,7 +21,8 @@ import {
   Scale,
   BookOpen,
   ExternalLink,
-  MapPin
+  MapPin,
+  Search
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/providers/auth-provider';

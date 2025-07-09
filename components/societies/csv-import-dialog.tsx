@@ -1,347 +1,323 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { 
   Upload, 
-  FileSpreadsheet, 
-  AlertCircle, 
+  FileText, 
   CheckCircle, 
-  X, 
-  Loader2,
+  AlertCircle, 
+  X,
   Download,
-  FileText,
-  Building2
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogHeader, 
-  DialogTitle 
-} from '@/components/ui/dialog';
-import { Progress } from '@/components/ui/progress';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
+import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { SocietiesCSVImporter, ImportResult, ImportProgress } from '@/lib/societies-csv-importer';
 
 interface CSVImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onImportComplete: () => void;
-  userId: string;
 }
 
 export function SocietiesCSVImportDialog({ 
   open, 
   onOpenChange, 
-  onImportComplete, 
-  userId 
+  onImportComplete 
 }: CSVImportDialogProps) {
   const [isImporting, setIsImporting] = useState(false);
-  const [importProgress, setImportProgress] = useState<ImportProgress>({ progress: 0, message: '' });
+  const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewData, setPreviewData] = useState<any[] | null>(null);
-  const [currentImporter, setCurrentImporter] = useState<SocietiesCSVImporter | null>(null);
+  const [dragActive, setDragActive] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { toast } = useToast();
 
-  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!file.name.toLowerCase().endsWith('.csv')) {
-      toast({
-        title: "Invalid File Type",
-        description: "Please select a CSV file",
-        variant: "destructive",
-      });
+  const handleFileSelect = (file: File) => {
+    const validation = SocietiesCSVImporter.validateCSVFile(file);
+    
+    if (!validation.valid) {
+      alert(validation.error);
       return;
     }
-
+    
     setSelectedFile(file);
     setImportResult(null);
-    setPreviewData(null);
+    setImportProgress(null);
+  };
 
-    // Generate preview
-    try {
-      const text = await file.text();
-      const importer = new SocietiesCSVImporter(userId);
-      const records = importer.parseCSV(text);
-      setPreviewData(records.slice(0, 5)); // Show first 5 records
-    } catch (error) {
-      toast({
-        title: "File Read Error",
-        description: "Could not read the CSV file. Please check the file format.",
-        variant: "destructive",
-      });
+  const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      handleFileSelect(file);
     }
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragActive(false);
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      handleFileSelect(files[0]);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragActive(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragActive(false);
   };
 
   const handleImport = async () => {
-    if (!selectedFile || !userId) return;
-
+    if (!selectedFile) return;
+    
+    setIsImporting(true);
+    setImportResult(null);
+    setImportProgress(null);
+    
     try {
-      setIsImporting(true);
-      setImportProgress({ progress: 0, message: 'Starting import...' });
-      setImportResult(null);
-
-      const text = await selectedFile.text();
-      const importer = new SocietiesCSVImporter(userId);
-      setCurrentImporter(importer);
+      const importer = new SocietiesCSVImporter((progress) => {
+        setImportProgress(progress);
+      });
       
-      const records = importer.parseCSV(text);
-      
-      if (records.length === 0) {
-        throw new Error('No valid records found in CSV file');
-      }
-
-      const result = await importer.importRecords(
-        records, 
-        (progress) => setImportProgress(progress),
-        selectedFile.name
-      );
-
+      const result = await importer.importFromCSV(selectedFile);
       setImportResult(result);
       
       if (result.success) {
-        toast({
-          title: "Import Successful",
-          description: `Imported ${result.imported} societies, skipped ${result.skipped}, found ${result.duplicates} duplicates`,
-        });
         onImportComplete();
-      } else {
-        toast({
-          title: "Import Failed",
-          description: "Check the import results for details",
-          variant: "destructive",
-        });
       }
+      
     } catch (error) {
       console.error('Import error:', error);
-      toast({
-        title: "Import Error",
-        description: error instanceof Error ? error.message : 'Unknown error occurred',
-        variant: "destructive",
+      setImportResult({
+        success: false,
+        message: `Import failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        totalRecords: 0,
+        successfulRecords: 0,
+        failedRecords: 0,
+        errors: [error instanceof Error ? error.message : 'Unknown error']
       });
     } finally {
       setIsImporting(false);
-      setCurrentImporter(null);
+      setImportProgress(null);
     }
   };
 
-  const handleCancel = () => {
-    if (currentImporter) {
-      currentImporter.cancel();
-    }
-    setIsImporting(false);
-    setImportProgress({ progress: 0, message: '' });
-    setCurrentImporter(null);
-  };
-
-  const handleClose = () => {
-    if (isImporting) {
-      handleCancel();
-    }
-    onOpenChange(false);
-    // Reset state
+  const resetDialog = () => {
     setSelectedFile(null);
-    setPreviewData(null);
     setImportResult(null);
-    setImportProgress({ progress: 0, message: '' });
+    setImportProgress(null);
+    setIsImporting(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
-  const downloadTemplate = () => {
-    const template = `REG_NO,SOCIETY_NAME,REG_DATE,FILE_NO,reg_office,address,nature,member_class,member_no,chairman,secretary,Comments,treasury
-23389,NEW REST CLUB,31/03/2004,40792,KWARE EMBAKSAI,218 00200 NAIROBI,CLUB,OVER 18 YEARS,45,SAMUEL WANAINA,JENNIFER WAMBUI NDICHU,,OLIVER WAMBUA
-23390,THE WATCHMENS PRAYER MINISTRY,31/03/2004,44016,NIAROBI,72717 NAIROBI,RELIGIOUS,OVER 18 YEARS,1000,AGNES NGARE,ANN THINDI,,JOHN THINDI`;
+  const handleClose = () => {
+    onOpenChange(false);
+    setTimeout(resetDialog, 300);
+  };
+
+  const downloadSampleCSV = () => {
+    const sampleData = [
+      ['Registered Name', 'registration_date', 'registration_number'],
+      ['GABRIEL PRISCILLA FOUNDATION', '2022-09-01', 'SOC-2ETPZQ'],
+      ['NEWNESS SOCIETY', '2023-05-09', 'SOCA-QPTKRPE'],
+      ['JOSKA ONE AND NEIGHBOURS RESIDENTS ASSOCIATION', '2022-10-13', 'SOC-DETDW']
+    ];
     
-    const blob = new Blob([template], { type: 'text/csv' });
+    const csvContent = sampleData.map(row => 
+      row.map(field => `"${field}"`).join(',')
+    ).join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'societies_template.csv';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'societies-sample.csv';
+    a.click();
     window.URL.revokeObjectURL(url);
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
-            <Building2 className="w-5 h-5" />
-            <span>Import Societies from CSV</span>
+          <DialogTitle className="flex items-center">
+            <FileText className="w-5 h-5 mr-2" />
+            Import Societies from CSV
           </DialogTitle>
           <DialogDescription>
-            Upload CSV files containing society registration data. The system will automatically detect and map columns from various formats including main registry, exempted societies, and e-citizen registrations.
+            Upload a CSV file to import societies data. The file should contain columns for society name, registration date, and registration number.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* File Upload Section */}
-          {!isImporting && !importResult && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-4"
-            >
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium">Select CSV File</h3>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={downloadTemplate}
-                  className="flex items-center space-x-2"
-                >
-                  <Download className="w-4 h-4" />
-                  <span>Download Template</span>
-                </Button>
-              </div>
+          {/* Sample CSV Download */}
+          <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
+            <div>
+              <h4 className="font-medium text-blue-900">Need a sample CSV?</h4>
+              <p className="text-sm text-blue-700">Download a sample CSV file with the correct format</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={downloadSampleCSV}>
+              <Download className="w-4 h-4 mr-2" />
+              Download Sample
+            </Button>
+          </div>
 
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors">
+          {/* CSV Format Requirements */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">CSV Format Requirements</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="text-center">
+                    <Badge variant="outline" className="mb-2">Required</Badge>
+                    <div className="text-sm font-medium">Registered Name</div>
+                    <div className="text-xs text-gray-500">Society name</div>
+                  </div>
+                  <div className="text-center">
+                    <Badge variant="secondary" className="mb-2">Optional</Badge>
+                    <div className="text-sm font-medium">registration_date</div>
+                    <div className="text-xs text-gray-500">YYYY-MM-DD format</div>
+                  </div>
+                  <div className="text-center">
+                    <Badge variant="secondary" className="mb-2">Optional</Badge>
+                    <div className="text-sm font-medium">registration_number</div>
+                    <div className="text-xs text-gray-500">Unique identifier</div>
+                  </div>
+                </div>
+                
+                <Alert>
+                  <AlertCircle className="w-4 h-4" />
+                  <AlertDescription>
+                    <strong>Important:</strong> The CSV must have a header row with column names. 
+                    Only the "Registered Name" column is required - other fields can be empty.
+                  </AlertDescription>
+                </Alert>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* File Upload Area */}
+          <Card>
+            <CardContent className="pt-6">
+              <div
+                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                  dragActive 
+                    ? 'border-blue-500 bg-blue-50' 
+                    : 'border-gray-300 hover:border-gray-400'
+                }`}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+              >
                 <input
                   ref={fileInputRef}
                   type="file"
                   accept=".csv"
-                  onChange={handleFileSelect}
+                  onChange={handleFileInputChange}
                   className="hidden"
                 />
-                <Button
-                  variant="outline"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center space-x-2"
-                >
-                  <Upload className="w-4 h-4" />
-                  <span>Choose CSV File</span>
-                </Button>
                 
-                {selectedFile && (
-                  <div className="mt-4 text-sm text-gray-600">
-                    Selected: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+                {selectedFile ? (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-center space-x-2">
+                      <FileText className="w-8 h-8 text-green-600" />
+                      <div>
+                        <div className="font-medium">{selectedFile.name}</div>
+                        <div className="text-sm text-gray-500">
+                          {(selectedFile.size / 1024).toFixed(1)} KB
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex space-x-2 justify-center">
+                      <Button
+                        onClick={handleImport}
+                        disabled={isImporting}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        {isImporting ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Importing...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-4 h-4 mr-2" />
+                            Import CSV
+                          </>
+                        )}
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        onClick={resetDialog}
+                        disabled={isImporting}
+                      >
+                        <X className="w-4 h-4 mr-2" />
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <Upload className="w-12 h-12 text-gray-400 mx-auto" />
+                    <div>
+                      <p className="text-lg font-medium">
+                        Drop your CSV file here, or{' '}
+                        <button
+                          onClick={() => fileInputRef.current?.click()}
+                          className="text-blue-600 hover:text-blue-700 underline"
+                        >
+                          browse
+                        </button>
+                      </p>
+                      <p className="text-sm text-gray-500 mt-1">
+                        Supports CSV files up to 10MB
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>
+            </CardContent>
+          </Card>
 
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  <strong>Supported formats:</strong> The importer handles various column layouts including Registration Number, Society Name, Registration Date, File Number, Registry Office, Address, Nature of Society, Member Information, Leadership Details, and Exemption Information. Multiple date formats (DD/MM/YYYY, DD.MM.YYYY, ISO) are supported. Missing columns are handled gracefully.
-                </AlertDescription>
-              </Alert>
-            </motion.div>
-          )}
-
-          {/* Preview Section */}
-          {previewData && !isImporting && !importResult && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-4"
-            >
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Data Preview</CardTitle>
-                  <CardDescription>
-                    First 5 records from your CSV file
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm border-collapse">
-                      <thead>
-                        <tr className="border-b">
-                          {Object.keys(previewData[0] || {}).slice(0, 6).map((key) => (
-                            <th key={key} className="text-left p-2 font-medium">
-                              {key.replace(/_/g, ' ').toUpperCase()}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {previewData.slice(0, 3).map((record, index) => (
-                          <tr key={index} className="border-b">
-                            {Object.values(record).slice(0, 6).map((value: any, i) => (
-                              <td key={i} className="p-2 max-w-xs truncate">
-                                {String(value || '-')}
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+          {/* Progress */}
+          {importProgress && (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Progress</span>
+                    <span>{importProgress.percentage}%</span>
                   </div>
-                  
-                  <div className="mt-4 flex items-center justify-between">
-                    <Badge variant="secondary">
-                      {previewData.length} records detected
-                    </Badge>
-                    <Button onClick={handleImport} className="flex items-center space-x-2">
-                      <Upload className="w-4 h-4" />
-                      <span>Start Import</span>
-                    </Button>
+                  <Progress value={importProgress.percentage} className="h-2" />
+                  <div className="text-xs text-gray-500">
+                    Processing: {importProgress.currentRecord} ({importProgress.processed} of {importProgress.total})
                   </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-
-          {/* Import Progress */}
-          {isImporting && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-4"
-            >
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Importing Societies</span>
-                  </CardTitle>
-                  <CardDescription>
-                    Processing your CSV file and importing societies to the database
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">Progress</span>
-                      <span className="text-sm text-gray-500">{importProgress.progress}%</span>
-                    </div>
-                    <Progress value={importProgress.progress} className="w-full" />
-                  </div>
-                  
-                  <div className="text-sm text-gray-600">
-                    {importProgress.message}
-                  </div>
-                  
-                  {importProgress.currentRecord && importProgress.totalRecords && (
-                    <div className="text-xs text-gray-500">
-                      Record {importProgress.currentRecord} of {importProgress.totalRecords}
-                    </div>
-                  )}
-                  
-                  <Button
-                    variant="outline"
-                    onClick={handleCancel}
-                    className="w-full"
-                  >
-                    Cancel Import
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
+                </div>
+              </CardContent>
+            </Card>
           )}
 
           {/* Import Results */}
@@ -349,119 +325,61 @@ export function SocietiesCSVImportDialog({
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="space-y-4"
+              transition={{ duration: 0.5 }}
             >
-              <Card>
+              <Card className={importResult.success ? 'border-green-200' : 'border-red-200'}>
                 <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
+                  <CardTitle className="flex items-center">
                     {importResult.success ? (
-                      <CheckCircle className="w-5 h-5 text-green-600" />
+                      <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
                     ) : (
-                      <AlertCircle className="w-5 h-5 text-red-600" />
+                      <AlertCircle className="w-5 h-5 text-red-600 mr-2" />
                     )}
-                    <span>Import {importResult.success ? 'Completed' : 'Failed'}</span>
+                    Import {importResult.success ? 'Successful' : 'Failed'}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-green-600">
-                        {importResult.imported}
+                <CardContent>
+                  <div className="space-y-4">
+                    <p className="text-sm">{importResult.message}</p>
+                    
+                    <div className="grid grid-cols-3 gap-4 text-center">
+                      <div>
+                        <div className="text-lg font-bold">{importResult.totalRecords}</div>
+                        <div className="text-xs text-gray-500">Total</div>
                       </div>
-                      <div className="text-sm text-gray-500">Imported</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-yellow-600">
-                        {importResult.skipped}
+                      <div>
+                        <div className="text-lg font-bold text-green-600">{importResult.successfulRecords}</div>
+                        <div className="text-xs text-gray-500">Successful</div>
                       </div>
-                      <div className="text-sm text-gray-500">Skipped</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-blue-600">
-                        {importResult.duplicates}
+                      <div>
+                        <div className="text-lg font-bold text-red-600">{importResult.failedRecords}</div>
+                        <div className="text-xs text-gray-500">Failed</div>
                       </div>
-                      <div className="text-sm text-gray-500">Duplicates</div>
                     </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-red-600">
-                        {importResult.errors.length}
+                    
+                    {importResult.errors.length > 0 && (
+                      <div className="mt-4">
+                        <h4 className="font-medium text-red-900 mb-2">Errors:</h4>
+                        <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                          <ul className="text-sm space-y-1">
+                            {importResult.errors.map((error, index) => (
+                              <li key={index} className="text-red-700">• {error}</li>
+                            ))}
+                          </ul>
+                        </div>
                       </div>
-                      <div className="text-sm text-gray-500">Errors</div>
-                    </div>
-                  </div>
-                  
-                  {importResult.warnings && importResult.warnings.length > 0 && (
-                    <Alert>
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>
-                        <div className="font-medium mb-2">
-                          {importResult.warnings.length} warnings occurred:
-                        </div>
-                        <div className="max-h-32 overflow-y-auto text-xs space-y-1">
-                          {importResult.warnings.slice(0, 5).map((warning, index) => (
-                            <div key={index} className="text-yellow-600">
-                              • {warning}
-                            </div>
-                          ))}
-                          {importResult.warnings.length > 5 && (
-                            <div className="text-gray-500">
-                              ... and {importResult.warnings.length - 5} more warnings
-                            </div>
-                          )}
-                        </div>
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                  
-                  {importResult.errors.length > 0 && (
-                    <Alert>
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>
-                        <div className="font-medium mb-2">
-                          {importResult.errors.length} errors occurred:
-                        </div>
-                        <div className="max-h-32 overflow-y-auto text-xs space-y-1">
-                          {importResult.errors.slice(0, 10).map((error, index) => (
-                            <div key={index} className="text-red-600">
-                              • {error}
-                            </div>
-                          ))}
-                          {importResult.errors.length > 10 && (
-                            <div className="text-gray-500">
-                              ... and {importResult.errors.length - 10} more errors
-                            </div>
-                          )}
-                        </div>
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                  
-                  <div className="flex space-x-3">
-                    <Button
-                      onClick={handleClose}
-                      className="flex-1"
-                    >
-                      Close
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setImportResult(null);
-                        setSelectedFile(null);
-                        setPreviewData(null);
-                        if (fileInputRef.current) {
-                          fileInputRef.current.value = '';
-                        }
-                      }}
-                      className="flex-1"
-                    >
-                      Import Another File
-                    </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
             </motion.div>
           )}
+        </div>
+
+        <div className="flex justify-end space-x-2 pt-4 border-t">
+          <Button variant="outline" onClick={handleClose}>
+            {importResult ? 'Close' : 'Cancel'}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
