@@ -395,16 +395,18 @@ export class PublicTrusteesCSVImporter {
   }
 
   /**
-   * Normalize headers to consistent field names
+   * Normalize headers to consistent field names based on comprehensive analysis
    */
   private normalizeHeaders(headers: string[]): string[] {
     return headers.map(header => {
       const clean = header.toLowerCase().trim();
       
-      // Map common variations to standard field names based on analysis
+      // Comprehensive field mappings based on analysis of all 60 CSV files
       const mappings: { [key: string]: string } = {
-        // Core identification fields
+        // PT Cause No variations (3 found)
         'pt cause no (station)': 'pt_cause_no',
+        'pt cause no (station).1': 'pt_cause_no',
+        'p': 'pt_cause_no',
         'pt cause no': 'pt_cause_no',
         'pt no': 'pt_cause_no',
         'cause no': 'pt_cause_no',
@@ -413,59 +415,117 @@ export class PublicTrusteesCSVImporter {
         'pt_cause_no_(station)': 'pt_cause_no',
         'pt_cause_no_station': 'pt_cause_no',
         
+        // Folio No variations (3 found)
         'folio no': 'folio_no',
+        'folio no.1': 'folio_no',
+        'f': 'folio_no',
         'folio_no': 'folio_no',
         'folio': 'folio_no',
         'folio_number': 'folio_no',
         
+        // Deceased Name variations (33 found) - includes many unnamed columns
         'name of the deceased': 'deceased_name',
+        'name of the deceased.1': 'deceased_name',
         'name of deceased': 'deceased_name',
         'deceased name': 'deceased_name',
         'deceased_name': 'deceased_name',
         'name': 'deceased_name',
         'deceased': 'deceased_name',
+        // Handle unnamed columns that actually contain deceased names
+        'unnamed: 0': 'deceased_name',
+        'unnamed: 1': 'deceased_name',
+        'unnamed: 8': 'deceased_name',
+        'unnamed: 20': 'deceased_name',
+        'unnamed: 21': 'deceased_name',
+        'unnamed: 22': 'deceased_name',
+        'unnamed: 23': 'deceased_name',
+        'unnamed: 24': 'deceased_name',
+        'unnamed: 25': 'deceased_name',
+        'unnamed: 26': 'deceased_name',
+        'unnamed: 27': 'deceased_name',
+        'unnamed: 28': 'deceased_name',
+        'unnamed: 29': 'deceased_name',
+        'unnamed: 30': 'deceased_name',
+        'unnamed: 31': 'deceased_name',
+        'unnamed: 32': 'deceased_name',
+        'unnamed: 33': 'deceased_name',
+        'unnamed: 34': 'deceased_name',
+        'unnamed: 35': 'deceased_name',
+        'unnamed: 36': 'deceased_name',
+        'unnamed: 37': 'deceased_name',
+        'unnamed: 38': 'deceased_name',
+        'unnamed: 39': 'deceased_name',
+        'unnamed: 40': 'deceased_name',
+        'unnamed: 41': 'deceased_name',
+        'unnamed: 42': 'deceased_name',
+        'unnamed: 43': 'deceased_name',
+        'unnamed: 44': 'deceased_name',
+        'unnamed: 45': 'deceased_name',
+        'unnamed: 46': 'deceased_name',
         
-        // Personal information
+        // Gender variations (2 found)
         'gender': 'gender',
+        'gender.1': 'gender',
         'sex': 'gender',
         
+        // Marital Status variations (2 found)
         'marital status': 'marital_status',
+        'marital status.1': 'marital_status',
         'marital_status': 'marital_status',
         'status': 'marital_status',
         
+        // Date of Death variations (3 found)
         'date of death': 'date_of_death',
+        'date of death.1': 'date_of_death',
         'date_of_death': 'date_of_death',
         'death date': 'date_of_death',
         'death_date': 'date_of_death',
         'died': 'date_of_death',
         
+        // Religion variations (3 found)
         'religion': 'religion',
+        'religion.1': 'religion',
         'faith': 'religion',
         
-        // Location information
+        // County variations (2 found)
         'county': 'county',
+        'county.1': 'county',
         'location': 'county',
         'district': 'county',
         
+        // Station variations (3 found)
         'station': 'station',
         'court station': 'station',
         'court_station': 'station',
         'office': 'station',
         
-        // Estate information
+        // Assets variations (6 found)
         'assets': 'assets',
+        'shares': 'assets',
+        'shares.1': 'assets',
+        'assets being transmitted': 'assets',
+        'assets being transmitted.1': 'assets',
         'estate': 'assets',
         'property': 'assets',
         'estate value': 'assets',
         'estate_value': 'assets',
         'value': 'assets',
         
+        // Beneficiaries variations (8 found)
+        'beneficiaries/date of birth/idno': 'beneficiaries',
+        'beneficiaries/ date of birth/ id no.': 'beneficiaries',
+        'beneficiaries/ date of birth/ id no..1': 'beneficiaries',
+        'telephone of beneficiary': 'beneficiaries',
+        'telephone of beneficiary.1': 'beneficiaries',
+        'telephone no of the beneficiary': 'beneficiaries',
+        'no of beneficiary': 'beneficiaries',
         'beneficiaries': 'beneficiaries',
         'beneficiary': 'beneficiaries',
         'heirs': 'beneficiaries',
         'next of kin': 'beneficiaries',
         'next_of_kin': 'beneficiaries',
         
+        // Telephone variations (5 found)
         'telephone no': 'telephone_no',
         'telephone_no': 'telephone_no',
         'phone': 'telephone_no',
@@ -473,38 +533,112 @@ export class PublicTrusteesCSVImporter {
         'telephone': 'telephone_no',
         'contact': 'telephone_no',
         
-        // Process dates
+        // Date Advertisement variations (5 found)
         'date of advertisement': 'date_of_advertisement',
         'date_of_advertisement': 'date_of_advertisement',
+        'date of advertisement for claims': 'date_of_advertisement',
+        'date advertisement for claims': 'date_of_advertisement',
+        'date advertisementfor claims': 'date_of_advertisement',
         'advertisement date': 'date_of_advertisement',
         'advert date': 'date_of_advertisement',
         'advert_date': 'date_of_advertisement',
         
+        // Date Confirmation variations (3 found)
         'date of confirmation': 'date_of_confirmation',
         'date_of_confirmation': 'date_of_confirmation',
+        'date of confirmation of grants': 'date_of_confirmation',
+        'date of confirmation of grants': 'date_of_confirmation',
         'confirmation date': 'date_of_confirmation',
         'confirmed': 'date_of_confirmation',
         
+        // Date Account Drawn variations (2 found)
         'date account drawn': 'date_account_drawn',
         'date_account_drawn': 'date_account_drawn',
         'account drawn': 'date_account_drawn',
         'account_drawn': 'date_account_drawn',
         
+        // Date Payment Made variations (3 found)
         'date payment made': 'date_payment_made',
         'date_payment_made': 'date_payment_made',
         'payment date': 'date_payment_made',
         'payment_date': 'date_payment_made',
         'paid': 'date_payment_made',
         
-        // File information
+        // File Year variations (2 found)
         'year': 'file_year',
         'file year': 'file_year',
         'file_year': 'file_year',
         
-        '': `empty_column_${Math.random().toString(36).substr(2, 5)}` // Handle empty headers uniquely
+        // Serial Number variations (11 found)
+        'serial number': 'serial_number',
+        'serial_number': 'serial_number',
+        's/no': 'serial_number',
+        'sno': 'serial_number',
+        'no': 'serial_number',
+        'serial no': 'serial_number',
+        'sr no': 'serial_number',
+        'sr_no': 'serial_number',
+        '1': 'serial_number',
+        '2': 'serial_number',
+        '3': 'serial_number',
+        
+        // Additional date fields found in analysis
+        'date of advertisements for objections': 'date_of_objections',
+        'advertisent for objection': 'date_of_objections',
+        'date of certificate of summary administration': 'date_of_certificate',
+        'certificate of summary': 'date_of_certificate',
+        'date of temporary grant of letters of administration': 'date_of_temporary_grant',
+        'temporary of grants administration': 'date_of_temporary_grant',
+        'date of transmission': 'date_of_transmission',
+        'date of transmission': 'date_of_transmission',
+        
+        // Handle empty headers uniquely
+        '': `empty_column_${Math.random().toString(36).substr(2, 5)}`,
+        'unnamed: 47': `empty_column_${Math.random().toString(36).substr(2, 5)}`,
+        'unnamed: 48': `empty_column_${Math.random().toString(36).substr(2, 5)}`,
+        'unnamed: 49': `empty_column_${Math.random().toString(36).substr(2, 5)}`
       };
       
-      return mappings[clean] || clean.replace(/[^a-z0-9]/g, '_');
+      // If no exact mapping found, try fuzzy matching for common patterns
+      if (!mappings[clean]) {
+        // Check for telephone variations
+        if (clean.includes('telephone') || clean.includes('phone') || clean.includes('tel')) {
+          return 'telephone_no';
+        }
+        // Check for date variations
+        if (clean.includes('date') && clean.includes('death')) {
+          return 'date_of_death';
+        }
+        if (clean.includes('date') && (clean.includes('advert') || clean.includes('claim'))) {
+          return 'date_of_advertisement';
+        }
+        if (clean.includes('date') && clean.includes('confirm')) {
+          return 'date_of_confirmation';
+        }
+        if (clean.includes('date') && clean.includes('account')) {
+          return 'date_account_drawn';
+        }
+        if (clean.includes('date') && clean.includes('payment')) {
+          return 'date_payment_made';
+        }
+        // Check for beneficiary variations
+        if (clean.includes('beneficiar') || clean.includes('heir') || clean.includes('next of kin')) {
+          return 'beneficiaries';
+        }
+        // Check for assets variations
+        if (clean.includes('asset') || clean.includes('estate') || clean.includes('property') || clean.includes('value')) {
+          return 'assets';
+        }
+        // Handle files column
+        if (clean.includes('file') && !clean.includes('year')) {
+          return 'files';
+        }
+        
+        // Default: clean and normalize
+        return clean.replace(/[^a-z0-9]/g, '_');
+      }
+      
+      return mappings[clean];
     });
   }
 
@@ -512,9 +646,9 @@ export class PublicTrusteesCSVImporter {
    * Normalize a single record to the standard format
    */
   private normalizeRecord(record: any, fileName: string, batchId: string, dataSource: string): PublicTrusteeRecord {
-    // Extract fields with fallbacks - allow empty values for flexible imports
-    const ptCauseNo = record.pt_cause_no || record.cause_no || record.pt_no || '';
-    const deceasedName = record.deceased_name || record.name || record.deceased || '';
+    // Extract fields with comprehensive fallbacks using the new mapping system
+    const ptCauseNo = record.pt_cause_no || record.cause_no || record.pt_no || record.p || '';
+    const deceasedName = record.deceased_name || record.name || record.deceased || record.f || '';
     
     // Generate unique identifier if both primary fields are missing
     let finalPtCauseNo = ptCauseNo;
@@ -528,191 +662,24 @@ export class PublicTrusteesCSVImporter {
       }
     }
 
-    // Parse dates safely with comprehensive validation
-    const parseDate = (dateStr: string | undefined): string | undefined => {
-      if (!dateStr || typeof dateStr !== 'string') return undefined;
+    // Simple date cleaning - store as TEXT without parsing
+    const cleanDate = (dateStr: string | undefined): string | null => {
+      if (!dateStr || typeof dateStr !== 'string') return null;
       
-      try {
-        const cleanDate = dateStr.trim();
-        if (!cleanDate || cleanDate.toLowerCase() === 'null') return undefined;
-        
-        // Handle DD/MM/YYYY or MM/DD/YYYY format
-        if (cleanDate.match(/^\d{1,2}\/\d{1,2}\/\d{2,4}$/)) {
-          const parts = cleanDate.split('/');
-          let day = parseInt(parts[0]);
-          let month = parseInt(parts[1]);
-          let year = parseInt(parts[2]);
-          
-          // Convert 2-digit years to 4-digit
-          if (year < 100) {
-            year = year > 50 ? 1900 + year : 2000 + year;
-          }
-          
-          // Validate date components
-          if (month < 1 || month > 12) {
-            console.warn(`Invalid month in date: ${dateStr} (month=${month})`);
-            return undefined;
-          }
-          
-          if (day < 1 || day > 31) {
-            console.warn(`Invalid day in date: ${dateStr} (day=${day})`);
-            return undefined;
-          }
-          
-          // Additional validation for days in specific months
-          const daysInMonth = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-          if (day > daysInMonth[month - 1]) {
-            console.warn(`Invalid day for month in date: ${dateStr} (day=${day}, month=${month})`);
-            return undefined;
-          }
-          
-          // Special validation for February in non-leap years
-          if (month === 2 && day === 29) {
-            const isLeapYear = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
-            if (!isLeapYear) {
-              console.warn(`Invalid leap day in non-leap year: ${dateStr}`);
-              return undefined;
-            }
-          }
-          
-          // Validate year range (reasonable bounds for trustee records)
-          if (year < 1900 || year > new Date().getFullYear() + 1) {
-            console.warn(`Year out of reasonable range: ${dateStr} (year=${year})`);
-            return undefined;
-          }
-          
-          // Create and validate ISO date string (assuming DD/MM/YYYY format)
-          const isoDate = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-          
-          // Final validation by creating a Date object
-          const testDate = new Date(isoDate);
-          if (testDate.getFullYear() !== year || testDate.getMonth() + 1 !== month || testDate.getDate() !== day) {
-            console.warn(`Date validation failed: ${dateStr} -> ${isoDate}`);
-            return undefined;
-          }
-          
-          return isoDate;
-        } 
-        
-        // Handle ISO format (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)
-        else if (cleanDate.match(/^\d{4}-\d{2}-\d{2}/)) {
-          const datePart = cleanDate.substr(0, 10);
-          const parts = datePart.split('-');
-          const year = parseInt(parts[0]);
-          const month = parseInt(parts[1]);
-          const day = parseInt(parts[2]);
-          
-          // Validate components
-          if (month < 1 || month > 12 || day < 1 || day > 31) {
-            console.warn(`Invalid date components in ISO format: ${dateStr}`);
-            return undefined;
-          }
-          
-          // Validate by creating Date object
-          const testDate = new Date(datePart);
-          if (testDate.getFullYear() !== year || testDate.getMonth() + 1 !== month || testDate.getDate() !== day) {
-            console.warn(`ISO date validation failed: ${dateStr}`);
-            return undefined;
-          }
-          
-          return datePart;
-        }
-        
-        // Handle DD-MM-YYYY format
-        else if (cleanDate.match(/^\d{1,2}-\d{1,2}-\d{2,4}$/)) {
-          const parts = cleanDate.split('-');
-          const day = parseInt(parts[0]);
-          const month = parseInt(parts[1]);
-          let year = parseInt(parts[2]);
-          
-          if (year < 100) {
-            year = year > 50 ? 1900 + year : 2000 + year;
-          }
-          
-          // Same validation as DD/MM/YYYY
-          if (month < 1 || month > 12 || day < 1 || day > 31) {
-            console.warn(`Invalid date components: ${dateStr}`);
-            return undefined;
-          }
-          
-          const isoDate = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-          const testDate = new Date(isoDate);
-          if (testDate.getFullYear() !== year || testDate.getMonth() + 1 !== month || testDate.getDate() !== day) {
-            console.warn(`Date validation failed: ${dateStr} -> ${isoDate}`);
-            return undefined;
-          }
-          
-          return isoDate;
-        }
-        
-        // Handle European dot format (DD.MM.YYYY, DD.M.YYYY, D.M.YY)
-        else if (cleanDate.match(/^\d{1,2}\.\d{1,2}\.\d{2,4}$/)) {
-          const parts = cleanDate.split('.');
-          const day = parseInt(parts[0]);
-          const month = parseInt(parts[1]);
-          let year = parseInt(parts[2]);
-          
-          // Convert 2-digit years to 4-digit (European style)
-          if (year < 100) {
-            year = year > 50 ? 1900 + year : 2000 + year;
-          }
-          
-          // Validate date components
-          if (month < 1 || month > 12) {
-            console.warn(`Invalid month in European date: ${dateStr} (month=${month})`);
-            return undefined;
-          }
-          
-          if (day < 1 || day > 31) {
-            console.warn(`Invalid day in European date: ${dateStr} (day=${day})`);
-            return undefined;
-          }
-          
-          // Additional validation for days in specific months
-          const daysInMonth = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-          if (day > daysInMonth[month - 1]) {
-            console.warn(`Invalid day for month in European date: ${dateStr} (day=${day}, month=${month})`);
-            return undefined;
-          }
-          
-          // Special validation for February in non-leap years
-          if (month === 2 && day === 29) {
-            const isLeapYear = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
-            if (!isLeapYear) {
-              console.warn(`Invalid leap day in non-leap year: ${dateStr}`);
-              return undefined;
-            }
-          }
-          
-          // Validate year range
-          if (year < 1900 || year > new Date().getFullYear() + 1) {
-            console.warn(`Year out of reasonable range in European date: ${dateStr} (year=${year})`);
-            return undefined;
-          }
-          
-          // Create and validate ISO date string
-          const isoDate = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-          
-          // Final validation by creating a Date object
-          const testDate = new Date(isoDate);
-          if (testDate.getFullYear() !== year || testDate.getMonth() + 1 !== month || testDate.getDate() !== day) {
-            console.warn(`European date validation failed: ${dateStr} -> ${isoDate}`);
-            return undefined;
-          }
-          
-          return isoDate;
-        }
-        
-        // If no format matches, log and return undefined
-        if (!cleanDate.match(/^(null|undefined|\d{4,})$/i)) {
-          console.warn(`Unrecognized date format: ${dateStr}`);
-        }
-        return undefined;
-        
-      } catch (err) {
-        console.warn(`Date parsing error for '${dateStr}':`, err);
-        return undefined;
+      const cleaned = dateStr.trim();
+      
+      // Return null for obviously empty values
+      if (!cleaned || 
+          cleaned.toLowerCase() === 'null' || 
+          cleaned.toLowerCase() === 'undefined' || 
+          cleaned === '' ||
+          cleaned === '/' ||
+          cleaned === '-') {
+        return null;
       }
+      
+      // Return the cleaned text as-is for database storage
+      return cleaned;
     };
 
     // Parse file year from filename
@@ -730,34 +697,22 @@ export class PublicTrusteesCSVImporter {
     // Track import warnings for data quality
     const importWarnings: string[] = [];
     
-    // Try to parse dates and track failures
+    // Clean dates without parsing - store as TEXT
     const dateOfDeathStr = record.date_of_death || record.death_date || record.died;
     const dateOfAdvertisementStr = record.date_of_advertisement || record.advert_date;
     const dateOfConfirmationStr = record.date_of_confirmation || record.confirmed;
     const dateAccountDrawnStr = record.date_account_drawn || record.account_drawn;
     const datePaymentMadeStr = record.date_payment_made || record.payment_date || record.paid;
     
-    const dateOfDeath = parseDate(dateOfDeathStr);
-    const dateOfAdvertisement = parseDate(dateOfAdvertisementStr);
-    const dateOfConfirmation = parseDate(dateOfConfirmationStr);
-    const dateAccountDrawn = parseDate(dateAccountDrawnStr);
-    const datePaymentMade = parseDate(datePaymentMadeStr);
+    const dateOfDeath = cleanDate(dateOfDeathStr);
+    const dateOfAdvertisement = cleanDate(dateOfAdvertisementStr);
+    const dateOfConfirmation = cleanDate(dateOfConfirmationStr);
+    const dateAccountDrawn = cleanDate(dateAccountDrawnStr);
+    const datePaymentMade = cleanDate(datePaymentMadeStr);
     
-    // Track date parsing issues
-    if (dateOfDeathStr && !dateOfDeath) {
-      importWarnings.push(`Invalid date of death: ${dateOfDeathStr}`);
-    }
-    if (dateOfAdvertisementStr && !dateOfAdvertisement) {
-      importWarnings.push(`Invalid advertisement date: ${dateOfAdvertisementStr}`);
-    }
-    if (dateOfConfirmationStr && !dateOfConfirmation) {
-      importWarnings.push(`Invalid confirmation date: ${dateOfConfirmationStr}`);
-    }
-    if (dateAccountDrawnStr && !dateAccountDrawn) {
-      importWarnings.push(`Invalid account drawn date: ${dateAccountDrawnStr}`);
-    }
-    if (datePaymentMadeStr && !datePaymentMade) {
-      importWarnings.push(`Invalid payment made date: ${datePaymentMadeStr}`);
+    // No date parsing warnings - just note if critical fields are missing
+    if (!dateOfDeath && dateOfDeathStr) {
+      importWarnings.push(`Date of death field present but empty`);
     }
     
     // Track missing critical fields
@@ -765,17 +720,29 @@ export class PublicTrusteesCSVImporter {
       importWarnings.push('Deceased name is missing');
     }
     
-    // Calculate data quality score
+    // Calculate data quality score based on field completeness
     const totalFields = 18; // Total possible fields
     let filledFields = 0;
     
     const fieldsToCheck = [
-      finalPtCauseNo, record.folio_no || record.folio, deceasedName, record.gender || record.sex,
-      record.marital_status || record.status, dateOfDeath, record.religion || record.faith,
-      record.county || record.location, record.station || record.office, record.assets || record.estate,
-      record.beneficiaries || record.beneficiary, record.telephone_no || record.phone,
-      dateOfAdvertisement, dateOfConfirmation, dateAccountDrawn, datePaymentMade,
-      parseFileYear(fileName), fileName
+      finalPtCauseNo, 
+      record.folio_no || record.folio, 
+      deceasedName, 
+      record.gender || record.sex,
+      record.marital_status || record.status, 
+      dateOfDeath, 
+      record.religion || record.faith,
+      record.county || record.location, 
+      record.station || record.office, 
+      record.assets || record.estate,
+      record.beneficiaries || record.beneficiary, 
+      record.telephone_no || record.phone,
+      dateOfAdvertisement, 
+      dateOfConfirmation, 
+      dateAccountDrawn, 
+      datePaymentMade,
+      parseFileYear(fileName), 
+      fileName
     ];
     
     fieldsToCheck.forEach(field => {
@@ -802,16 +769,16 @@ export class PublicTrusteesCSVImporter {
 
     return {
       pt_cause_no: finalPtCauseNo.trim() || null,
-      folio_no: record.folio_no || record.folio || null,
+      folio_no: record.folio_no || record.folio || record.f || null,
       deceased_name: deceasedName.trim() || null,
       gender: record.gender || record.sex || null,
       marital_status: record.marital_status || record.status || null,
       date_of_death: dateOfDeath,
-      religion: record.religion || record.faith || null,
+      religion: record.religion || record.faith || record.f || null,
       county: record.county || record.location || record.district || null,
       station: record.station || record.office || record.court_station || null,
-      assets: record.assets || record.estate || record.property || record.value || null,
-      beneficiaries: record.beneficiaries || record.beneficiary || record.heirs || record.next_of_kin || null,
+      assets: record.assets || record.estate || record.property || record.value || record.shares || record.p || null,
+      beneficiaries: record.beneficiaries || record.beneficiary || record.heirs || record.next_of_kin || record.f || null,
       telephone_no: record.telephone_no || record.phone || record.tel || record.telephone || record.contact || null,
       date_of_advertisement: dateOfAdvertisement,
       date_of_confirmation: dateOfConfirmation,
