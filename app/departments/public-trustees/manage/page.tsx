@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { 
@@ -94,6 +94,7 @@ export default function PublicTrusteesManagePage() {
   const [trustees, setTrustees] = useState<PublicTrustee[]>([]);
   const [isLoadingTrustees, setIsLoadingTrustees] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [genderFilter, setGenderFilter] = useState('all');
   const [countyFilter, setCountyFilter] = useState('all');
   const [yearFilter, setYearFilter] = useState('all');
@@ -102,6 +103,7 @@ export default function PublicTrusteesManagePage() {
   const [totalTrustees, setTotalTrustees] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [selectedTrustee, setSelectedTrustee] = useState<PublicTrustee | null>(null);
+  const [hiddenRecordsCount, setHiddenRecordsCount] = useState(0);
 
   // Filter options
   const [counties, setCounties] = useState<string[]>([]);
@@ -110,6 +112,30 @@ export default function PublicTrusteesManagePage() {
 
   // Import dialog state
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+
+  // Debounced search implementation
+  const debouncedSearch = useMemo(
+    () => {
+      const timeoutRef = { current: null as NodeJS.Timeout | null };
+      
+      return (value: string) => {
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
+        
+        timeoutRef.current = setTimeout(() => {
+          setDebouncedSearchTerm(value);
+          setCurrentPage(1); // Reset to first page
+        }, 300); // 300ms delay
+      };
+    },
+    []
+  );
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    debouncedSearch(value);
+  };
 
   const loadTrustees = useCallback(async () => {
     try {
@@ -120,9 +146,25 @@ export default function PublicTrusteesManagePage() {
         .select('*', { count: 'exact' })
         .order('created_at', { ascending: false });
 
-      // Apply filters
-      if (searchTerm) {
-        query = query.or(`deceased_name.ilike.%${searchTerm}%,pt_cause_no.ilike.%${searchTerm}%,folio_no.ilike.%${searchTerm}%`);
+      // Filter out records without names and low quality records
+      query = query
+        .not('deceased_name', 'is', null)
+        .neq('deceased_name', '')
+        .neq('deceased_name', '-')
+        .gte('data_quality_score', 60);
+
+      // Apply robust search filters
+      if (debouncedSearchTerm && debouncedSearchTerm.trim()) {
+        const searchValue = debouncedSearchTerm.trim();
+        
+        // Check if it's likely a number (for PT cause no or folio no)
+        if (/^\d+$/.test(searchValue)) {
+          // For numbers, prioritize pt_cause_no and folio_no with partial matching
+          query = query.or(`pt_cause_no.ilike.%${searchValue}%,folio_no.ilike.%${searchValue}%,deceased_name.ilike.%${searchValue}%`);
+        } else {
+          // For text, search across all relevant fields with partial matching
+          query = query.or(`deceased_name.ilike.%${searchValue}%,pt_cause_no.ilike.%${searchValue}%,folio_no.ilike.%${searchValue}%,county.ilike.%${searchValue}%,station.ilike.%${searchValue}%,assets.ilike.%${searchValue}%,beneficiaries.ilike.%${searchValue}%`);
+        }
       }
       
       if (genderFilter !== 'all') {
@@ -153,6 +195,14 @@ export default function PublicTrusteesManagePage() {
       setTrustees(data || []);
       setTotalTrustees(count || 0);
       setTotalPages(Math.ceil((count || 0) / ITEMS_PER_PAGE));
+      
+      // Get count of hidden records (those with no names or low quality scores)
+      const { count: hiddenCount } = await supabase
+        .from('public_trustees')
+        .select('*', { count: 'exact', head: true })
+        .or('deceased_name.is.null,deceased_name.eq.,deceased_name.eq.-,data_quality_score.lt.60');
+      
+      setHiddenRecordsCount(hiddenCount || 0);
     } catch (error) {
       console.error('Error loading trustees:', error);
       toast({
@@ -163,7 +213,7 @@ export default function PublicTrusteesManagePage() {
     } finally {
       setIsLoadingTrustees(false);
     }
-  }, [searchTerm, genderFilter, countyFilter, yearFilter, sourceFilter, currentPage, toast]);
+  }, [debouncedSearchTerm, genderFilter, countyFilter, yearFilter, sourceFilter, currentPage, toast]);
 
   const loadFilterOptions = useCallback(async () => {
     try {
@@ -229,8 +279,24 @@ export default function PublicTrusteesManagePage() {
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (searchTerm) {
-        query = query.or(`deceased_name.ilike.%${searchTerm}%,pt_cause_no.ilike.%${searchTerm}%,folio_no.ilike.%${searchTerm}%`);
+      // Apply same filters as display (hide nameless records and low quality)
+      query = query
+        .not('deceased_name', 'is', null)
+        .neq('deceased_name', '')
+        .neq('deceased_name', '-')
+        .gte('data_quality_score', 60);
+
+      if (debouncedSearchTerm && debouncedSearchTerm.trim()) {
+        const searchValue = debouncedSearchTerm.trim();
+        
+        // Check if it's likely a number (for PT cause no or folio no)
+        if (/^\d+$/.test(searchValue)) {
+          // For numbers, prioritize pt_cause_no and folio_no with partial matching
+          query = query.or(`pt_cause_no.ilike.%${searchValue}%,folio_no.ilike.%${searchValue}%,deceased_name.ilike.%${searchValue}%`);
+        } else {
+          // For text, search across all relevant fields with partial matching
+          query = query.or(`deceased_name.ilike.%${searchValue}%,pt_cause_no.ilike.%${searchValue}%,folio_no.ilike.%${searchValue}%,county.ilike.%${searchValue}%,station.ilike.%${searchValue}%,assets.ilike.%${searchValue}%,beneficiaries.ilike.%${searchValue}%`);
+        }
       }
       
       if (genderFilter !== 'all') {
@@ -395,9 +461,9 @@ export default function PublicTrusteesManagePage() {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <Input
-                    placeholder="Search trustees..."
+                    placeholder="Search trustees, PT numbers, counties, assets..."
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => handleSearchChange(e.target.value)}
                     className="pl-10"
                   />
                 </div>
@@ -455,6 +521,7 @@ export default function PublicTrusteesManagePage() {
                   variant="outline" 
                   onClick={() => {
                     setSearchTerm('');
+                    setDebouncedSearchTerm('');
                     setGenderFilter('all');
                     setCountyFilter('all');
                     setYearFilter('all');
@@ -471,9 +538,14 @@ export default function PublicTrusteesManagePage() {
           {/* Trustees Table */}
           <Card>
             <CardHeader>
-              <CardTitle>Public Trustees ({totalTrustees} total)</CardTitle>
+              <CardTitle>Public Trustees ({totalTrustees} displayed)</CardTitle>
               <CardDescription>
-                Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, totalTrustees)} of {totalTrustees} trustee records
+                Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, totalTrustees)} of {totalTrustees} quality trustee records
+                {hiddenRecordsCount > 0 && (
+                  <span className="text-muted-foreground ml-2">
+                    • {hiddenRecordsCount} records hidden (no name or quality score &lt; 60%)
+                  </span>
+                )}
               </CardDescription>
             </CardHeader>
             <CardContent>
