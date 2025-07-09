@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -38,6 +38,7 @@ interface PublicTrustee {
 
 export default function PublicTrusteesRegistryPage() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [trustees, setTrustees] = useState<PublicTrustee[]>([]);
   const [filteredTrustees, setFilteredTrustees] = useState<PublicTrustee[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -63,12 +64,36 @@ export default function PublicTrusteesRegistryPage() {
     latestYear: 0
   });
 
+  // Debounced search implementation
+  const debouncedSearch = useMemo(
+    () => {
+      const timeoutRef = { current: null as NodeJS.Timeout | null };
+      
+      return (value: string) => {
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
+        
+        timeoutRef.current = setTimeout(() => {
+          setDebouncedSearchQuery(value);
+          setCurrentPage(1); // Reset to first page when searching
+        }, 300); // 300ms delay
+      };
+    },
+    []
+  );
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    debouncedSearch(value);
+  };
+
   const loadTrustees = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
       
-      // Load trustees with pagination for better performance
+      // Load trustees with quality filtering for public registry
       // Only select the fields needed for public registry
       const { data, error } = await supabase
         .from('public_trustees')
@@ -83,8 +108,15 @@ export default function PublicTrusteesRegistryPage() {
           file_year,
           created_at
         `)
+        // Filter out low-quality and auto-generated records
+        .not('deceased_name', 'is', null)
+        .neq('deceased_name', '')
+        .neq('deceased_name', '-')
+        .gte('data_quality_score', 60)
+        .not('pt_cause_no', 'like', 'IMPORT_%')
+        .not('pt_cause_no', 'like', 'AUTO_%')
         .order('created_at', { ascending: false })
-        .limit(500); // Load first 500 records
+        .limit(1000); // Increased limit for better search coverage
 
       if (error) {
         console.error('Database error:', error);
@@ -119,10 +151,17 @@ export default function PublicTrusteesRegistryPage() {
 
   const loadStatistics = async () => {
     try {
-      // Get statistics directly from database
+      // Get statistics directly from database with quality filtering
       const { data: countData } = await supabase
         .from('public_trustees')
-        .select('gender, file_year, county, date_of_death');
+        .select('gender, file_year, county, date_of_death')
+        // Apply same quality filters for statistics
+        .not('deceased_name', 'is', null)
+        .neq('deceased_name', '')
+        .neq('deceased_name', '-')
+        .gte('data_quality_score', 60)
+        .not('pt_cause_no', 'like', 'IMPORT_%')
+        .not('pt_cause_no', 'like', 'AUTO_%');
         
       if (countData) {
         const totalTrustees = countData.length;
@@ -183,13 +222,27 @@ export default function PublicTrusteesRegistryPage() {
           file_year,
           created_at
         `)
-        .order('created_at', { ascending: false })
-        .limit(1000); // Increase limit for search results
+        // Apply quality filters first
+        .not('deceased_name', 'is', null)
+        .neq('deceased_name', '')
+        .neq('deceased_name', '-')
+        .gte('data_quality_score', 60)
+        .not('pt_cause_no', 'like', 'IMPORT_%')
+        .not('pt_cause_no', 'like', 'AUTO_%')
+        .order('created_at', { ascending: false });
 
-      // Apply text search - only on searchable fields
-      if (searchQuery.trim()) {
-        const searchTerm = searchQuery.trim();
-        query = query.or(`pt_cause_no.ilike.%${searchTerm}%,folio_no.ilike.%${searchTerm}%,deceased_name.ilike.%${searchTerm}%`);
+      // Apply text search - improved case-insensitive search using debounced query
+      if (debouncedSearchQuery.trim()) {
+        const searchTerm = debouncedSearchQuery.trim();
+        
+        // Check if it's likely a number (for PT cause no or folio no)
+        if (/^\d+$/.test(searchTerm)) {
+          // For numbers, prioritize pt_cause_no and folio_no with partial matching
+          query = query.or(`pt_cause_no.ilike.%${searchTerm}%,folio_no.ilike.%${searchTerm}%,deceased_name.ilike.%${searchTerm}%`);
+        } else {
+          // For text, use case-insensitive partial matching across all searchable fields
+          query = query.or(`pt_cause_no.ilike.%${searchTerm}%,folio_no.ilike.%${searchTerm}%,deceased_name.ilike.%${searchTerm}%`);
+        }
       }
 
       // Apply county filter
@@ -215,12 +268,22 @@ export default function PublicTrusteesRegistryPage() {
       
     } catch (error) {
       console.error('Error filtering trustees:', error);
-      // Fallback to client-side filtering
+      // Fallback to client-side filtering with quality filtering
       let filtered = [...trustees];
       
-      // Text search across searchable fields only
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
+      // Apply quality filters first
+      filtered = filtered.filter(trustee => 
+        trustee.deceased_name && 
+        trustee.deceased_name !== '' && 
+        trustee.deceased_name !== '-' &&
+        trustee.pt_cause_no &&
+        !trustee.pt_cause_no.startsWith('IMPORT_') &&
+        !trustee.pt_cause_no.startsWith('AUTO_')
+      );
+      
+      // Text search across searchable fields with improved matching using debounced query
+      if (debouncedSearchQuery.trim()) {
+        const query = debouncedSearchQuery.toLowerCase();
         filtered = filtered.filter(trustee =>
           trustee.pt_cause_no?.toLowerCase().includes(query) ||
           trustee.folio_no?.toLowerCase().includes(query) ||
@@ -251,31 +314,27 @@ export default function PublicTrusteesRegistryPage() {
       
       setFilteredTrustees(filtered);
     }
-  }, [searchQuery, selectedCounties, selectedGenders, selectedYears, trustees]);
+  }, [debouncedSearchQuery, selectedCounties, selectedGenders, selectedYears, trustees]);
 
   useEffect(() => {
     loadTrustees();
   }, [loadTrustees]);
 
   useEffect(() => {
-    // Debounce search and filters to avoid too many API calls
-    const timeoutId = setTimeout(() => {
-      if (searchQuery || selectedCounties.length > 0 || selectedYears.length > 0 || selectedGenders.length > 0) {
-        loadFilteredTrustees();
-      } else {
-        setFilteredTrustees(trustees);
-      }
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
-  }, [searchQuery, selectedCounties, selectedYears, selectedGenders, loadFilteredTrustees, trustees]);
+    // Load filtered trustees when debounced search or filters change
+    if (debouncedSearchQuery || selectedCounties.length > 0 || selectedYears.length > 0 || selectedGenders.length > 0) {
+      loadFilteredTrustees();
+    } else {
+      setFilteredTrustees(trustees);
+    }
+  }, [debouncedSearchQuery, selectedCounties, selectedYears, selectedGenders, loadFilteredTrustees, trustees]);
 
   useEffect(() => {
     // Update filtered results when base trustees data changes
-    if (!searchQuery && selectedCounties.length === 0 && selectedYears.length === 0 && selectedGenders.length === 0) {
+    if (!debouncedSearchQuery && selectedCounties.length === 0 && selectedYears.length === 0 && selectedGenders.length === 0) {
       setFilteredTrustees(trustees);
     }
-  }, [trustees, searchQuery, selectedCounties, selectedYears, selectedGenders]);
+  }, [trustees, debouncedSearchQuery, selectedCounties, selectedYears, selectedGenders]);
 
   const getUniqueCounties = () => {
     return Array.from(new Set(
@@ -386,6 +445,7 @@ export default function PublicTrusteesRegistryPage() {
 
   const clearFilters = () => {
     setSearchQuery('');
+    setDebouncedSearchQuery('');
     setSelectedCounties([]);
     setSelectedYears([]);
     setSelectedGenders([]);
@@ -498,7 +558,7 @@ export default function PublicTrusteesRegistryPage() {
                   <Input
                     placeholder="Search by PT Cause No, Folio No, or Name of the Deceased..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={(e) => handleSearchChange(e.target.value)}
                     className="pl-10 h-12 text-lg"
                   />
                 </div>
